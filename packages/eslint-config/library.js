@@ -31,4 +31,8 @@ module.exports = {
       files: ["*.js?(x)", "*.ts?(x)"],
     },
   ],
+  rules: {
+    "comma-dangle": "always",
+    "semi": "always",
+  }
 };

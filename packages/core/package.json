@@ -1,0 +1,34 @@
+{
+  "name": "@imagejs/core",
+  "version": "0.0.1",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsup",
+    "clean": "rimraf dist",
+    "dev": "tsup --watch --onSuccess \"node dist/index.js\"",
+    "lint": "eslint src/ --max-warnings 0",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --detectOpenHandles"
+  },
+  "devDependencies": {
+    "@imagejs/eslint-config": "workspace:*",
+    "@imagejs/typescript-config": "workspace:*",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^20.12.12",
+    "rimraf": "^5.0.7",
+    "tsup": "^8.0.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "debug": "^4.3.4",
+    "sharp": "^0.33.4"
+  }
+}
