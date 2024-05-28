@@ -149,8 +149,8 @@ export class ImageJS implements ImageJSOptions {
       });
     }).flat()
 
-    if (imagesToSave.length) this,this.outputAdapter.log('[SYNC] Saving images:', saveMappedToOriginal)
-    if (imagesToDelete.length) this.outputAdapter.log('[SYNC] Deleting images:', resolveImageDeleteSizes)
+    if (imagesToSave.length) this,this.outputAdapter.log('[SYNC] Saving images: %O', saveMappedToOriginal)
+    if (imagesToDelete.length) this.outputAdapter.log('[SYNC] Deleting images: %O', resolveImageDeleteSizes)
 
     await Promise.all([
       this.outputAdapter.supportsSave
@@ -167,7 +167,11 @@ export class ImageJS implements ImageJSOptions {
       ),
     ])
 
-    this.log(`[SYNC] Synced ${saveMappedToOriginal.length} images and deleted ${resolveImageDeleteSizes.length} images`);
+    this.log(`
+      [SYNC] Synced %d images and deleted %d images`,
+      saveMappedToOriginal.length,
+      resolveImageDeleteSizes.length
+    );
   }
 
   /**
@@ -208,7 +212,7 @@ export class ImageJS implements ImageJSOptions {
     const images = typeof inputDir === 'string'
       ? await this.inputAdapter.loadImages(inputDir)
       : inputDir;
-    this.log('Images to optimize:', images);
+    this.log('Images to optimize: %O', images);
     const promises = images.map(async (image) => {
       const innerPromises = Object.entries(this.sizes).map(async ([sizeKey, size]) => {
         const outputPath = this.resolveId(image, sizeKey as SizeKey, outputDir);
