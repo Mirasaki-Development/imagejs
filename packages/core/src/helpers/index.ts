@@ -28,7 +28,7 @@ export const removeImageFormat = (image: string) => {
   return image.replace(imageExtensionRegex, '');
 }
 
-export const resolveSharpTransformer = (image: string, format: ImageFormat) => {
+export const resolveSharpTransformer = (image: Buffer, format: ImageFormat) => {
   const instance = sharp(image);
   switch (format) {
     case 'avif':

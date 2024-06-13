@@ -1,7 +1,7 @@
 import path from 'path';
 
 import debug from 'debug';
-import { Adapter, AdapterResult, PrivateAdapter } from '.';
+import { Adapter, AdapterCache, PrivateAdapter } from '.';
 import { MappedImages, OptimizedImageData } from '../types/wrapper';
 import { ImageFormat, ImageJSOptions, ImageSize, ImageSizes, SizeKey } from '../types';
 import { defaultSizes, removeImageFormat } from '../helpers';
@@ -13,10 +13,11 @@ export class ImageJS implements ImageJSOptions {
   public sizes: ImageSizes;
   public targetFormat: ImageFormat = 'webp';
   protected readonly log = debug('imagejs');
+  private readonly hashCache: AdapterCache;
   constructor(
     inputAdapter: Adapter,
     outputAdapter: Adapter,
-    options?: ImageJSOptions
+    options?: ImageJSOptions,
   ) {
     this.inputAdapter = new PrivateAdapter('input', inputAdapter);
     this.outputAdapter = new PrivateAdapter('output', outputAdapter);
@@ -30,6 +31,11 @@ export class ImageJS implements ImageJSOptions {
     if (options?.targetFormat) {
       this.targetFormat = options.targetFormat;
     }
+    this.hashCache = new AdapterCache({
+      algorithm: options?.hashOptions?.algorithm ?? AdapterCache.defaults.algorithm,
+      encoding: options?.hashOptions?.encoding ?? AdapterCache.defaults.encoding,
+      length: options?.hashOptions?.length ?? AdapterCache.defaults.length,
+    });
   }
 
   /**
@@ -58,24 +64,6 @@ export class ImageJS implements ImageJSOptions {
   }
 
   /**
-   * Fetch an image from the adapter
-   * @param id The id of the image. Either a string representing the 
-   * path to an optimized image, or an object with the (raw) id, and (preferred) size.
-   * @returns The image buffer
-   */
-  async fetch(id: string | {
-    id: string,
-    size: SizeKey,
-    outputPath?: string
-  }): Promise<AdapterResult | undefined> {
-    const resolvedId = typeof id === 'string'
-    ? id
-    : this.resolveId(id.id, id.size, id.outputPath);
-    this.outputAdapter.log(`Fetching image with id: ${resolvedId}`);
-    return this.outputAdapter.fetch(resolvedId);
-  }
-
-  /**
    * Optimize an image according to the specified size and format
    * @param image The path to the original image
    * @param size The preferred size of the image
@@ -83,11 +71,11 @@ export class ImageJS implements ImageJSOptions {
    * @returns The optimized image as a Buffer
    */
   async optimizeImage(
-    image: string,
+    image: Buffer,
     size: ImageSize,
     format: ImageFormat = 'webp',
   ): Promise<Buffer> {
-    this.log(`Optimizing image "${image}" with size ${JSON.stringify(size)} and format ${format}`);
+    this.log(`Optimizing image with size ${JSON.stringify(size)} and format ${format}`);
     return ImageTransformer.transformImage({
       image,
       size,
@@ -109,30 +97,33 @@ export class ImageJS implements ImageJSOptions {
    * will always optimize the images, even if they haven't changed
    * and are already optimized. This is prone to change in the future.
    */ // [DEV]
-  async sync(): Promise<void> {
+  async sync(force = false): Promise<void> {
     this.log('Syncing source and destination directories');
-    if (!this.inputAdapter.supportsLoad) {
-      this.inputAdapter.log('This adapter does not support loading images');
+    if (!this.inputAdapter.supportsList) {
+      this.inputAdapter.log('This adapter does not support listing images');
       return;
     }
 
+    const start = process.hrtime.bigint();
+
+    if (force) {
+      this.outputAdapter.log('[SYNC] Cleaning destination directory');
+      this.hashCache.clear();
+      await this.outputAdapter.clean();
+    }
+
     this.inputAdapter.log('[SYNC] Loading source images');
-    const sourceImages = await this.inputAdapter.loadImages(this.inputAdapter.basePath);
+    const sourceImages = await this.inputAdapter.listImages(this.inputAdapter.basePath);
     const sourceImagesExpectedOutput = sourceImages // Map to expected target format output
       .map((e) => `${removeImageFormat(e)}.${this.targetFormat}`);
 
     this.outputAdapter.log('[SYNC] Loading destination images');
-    const destinationImages = await this.outputAdapter.loadImages(`${this.outputAdapter.basePath}/blur`)
+    const destinationImages = await this.outputAdapter.listImages(`${this.outputAdapter.basePath}/blur`)
     const destinationImagesSources = destinationImages // Map optimized images back to original (source) url
       .map((image) => image.replace(`${this.outputAdapter.basePath}/blur`, this.inputAdapter.basePath));
 
     const imagesToSave = sourceImagesExpectedOutput.filter((image) => !destinationImagesSources.includes(image));
     const imagesToDelete = destinationImagesSources.filter((image) => !sourceImagesExpectedOutput.includes(image));
-
-    if (!imagesToSave.length && !imagesToDelete.length) {
-      this.log('[SYNC] No images to save or delete');
-      return;
-    }
 
     const saveMappedToOriginal = imagesToSave.map((image) => {
       const index = sourceImagesExpectedOutput.indexOf(image);
@@ -150,14 +141,18 @@ export class ImageJS implements ImageJSOptions {
     }).flat()
 
     if (imagesToSave.length) this,this.outputAdapter.log('[SYNC] Saving images: %O', saveMappedToOriginal)
-    if (imagesToDelete.length) this.outputAdapter.log('[SYNC] Deleting images: %O', resolveImageDeleteSizes)
+    if (imagesToDelete.length) {
+      this.outputAdapter.log('[SYNC] Deleting images: %O', resolveImageDeleteSizes)
+      imagesToDelete.forEach((image) => this.hashCache.delete(image));
+    }
 
     await Promise.all([
       this.outputAdapter.supportsSave
         ? this.generateOptimizedSizes({
           save: true,
           inputDir: saveMappedToOriginal,
-          outputDir: this.outputAdapter.basePath
+          outputDir: this.outputAdapter.basePath,
+          callback: (id, buffer) => this.hashCache.set(id, this.hashCache.computeBufferHash(buffer)),
         })
         : null,
       ...(
@@ -167,11 +162,69 @@ export class ImageJS implements ImageJSOptions {
       ),
     ])
 
+    // Only check for changes if not hard-syncing
+    // Has to be after the images are saved and deleted
+    // as otherwise the cache would be out of sync
+    let changes: null | string[] = null;
+    if (!force) changes = await this.checkForChanges([
+      ...saveMappedToOriginal,
+      ...resolveImageDeleteSizes
+    ]);
+
     this.log(`
-      [SYNC] Synced %d images and deleted %d images`,
+      [SYNC] Synced %d images, deleted %d images, updated %d changed images, completed in %dms`,
       saveMappedToOriginal.length,
-      resolveImageDeleteSizes.length
+      resolveImageDeleteSizes.length,
+      changes ? changes.length : 0,
+      Number(process.hrtime.bigint() - start) / 1e6
     );
+  }
+
+  /**
+   * This function only checks for changes if the input adapter
+   * supports listing and streaming images. Otherwise, we could
+   * end up using too many system resources.
+   * @returns 
+   */
+  async checkForChanges(
+    ignore?: string[]
+  ) {
+    if (!this.inputAdapter.supportsList) {
+      this.inputAdapter.log('This adapter does not support listing images');
+      return null;
+    }
+    if (!this.inputAdapter.supportsStream) {
+      this.outputAdapter.log('This adapter does not support streaming images');
+      return null;
+    }
+    this.inputAdapter.log('Checking for changes in source images');
+    const allImages = await this.inputAdapter.listImages(this.inputAdapter.basePath);
+    const resolvedImages = ignore ? allImages.filter((e) => !ignore.includes(e)) : allImages;
+
+    const response = await Promise.all(
+      resolvedImages.map(async (e) => {
+        const hashKey = await this.hashCache.computeStreamHash(await this.inputAdapter.stream(e, false));
+        const fromCache = this.hashCache.get(e);
+        if (fromCache === hashKey) {
+          this.hashCache.log(`Image "${e}" has not changed`);
+          return null;
+        }
+
+        this.hashCache.log(`Image "${e}" has changed, old hash: ${fromCache}, new hash: ${hashKey}`);
+        this.hashCache.set(e, hashKey);
+        return e;
+      })
+    )
+
+    const toOptimize = response.filter((e) => e !== null) as string[];
+    const optimizedImages = await this.generateOptimizedSizes({
+      save: true,
+      inputDir: toOptimize,
+      outputDir: this.outputAdapter.basePath
+    });
+    const mappedImages = this.mapOptimizedImages(optimizedImages);
+    this.hashCache.log('Updated/changed images: %O', mappedImages);
+    return Object.keys(mappedImages)
   }
 
   /**
@@ -185,7 +238,8 @@ export class ImageJS implements ImageJSOptions {
   async generateOptimizedSizes({
     save = true,
     inputDir = this.inputAdapter.basePath,
-    outputDir = this.outputAdapter.basePath
+    outputDir = this.outputAdapter.basePath,
+    callback,
   }: {
     /**
      * Whether to save the optimized images
@@ -201,22 +255,29 @@ export class ImageJS implements ImageJSOptions {
      * @default this.inputAdapter.basePath
      */
     inputDir?: string | string[];
-    outputDir?: string
+    outputDir?: string;
+    /**
+     * The callback to run for each image that will be optimized
+     */
+    callback?: (id: string, buffer: Buffer) => void;
   } = {}): Promise<OptimizedImageData> {
     this.log(`Generating optimized images from ${inputDir} to ${outputDir}`);
-    if (!this.inputAdapter.supportsLoad) {
-      this.inputAdapter.log('This adapter does not support loading images');
+    if (typeof inputDir === 'string' && !this.inputAdapter.supportsList) {
+      this.inputAdapter.log('This adapter does not support listing images');
       return [];
     }
     this.inputAdapter.log('Loading/resolving images from', inputDir);
     const images = typeof inputDir === 'string'
-      ? await this.inputAdapter.loadImages(inputDir)
+      ? await this.inputAdapter.listImages(inputDir)
       : inputDir;
     this.log('Images to optimize: %O', images);
     const promises = images.map(async (image) => {
+      const response = await this.inputAdapter.fetch(image, false)
+      if (!response) throw new Error(`Could not fetch image at path "${image}", please create a GitHub issue`);
+      if (callback) callback(image, response.data);
       const innerPromises = Object.entries(this.sizes).map(async ([sizeKey, size]) => {
         const outputPath = this.resolveId(image, sizeKey as SizeKey, outputDir);
-        const data = await this.optimizeImage(image, size);
+        const data = await this.optimizeImage(response.data, size);
         if (save && this.outputAdapter.supportsSave) {
           this.outputAdapter.log(`Saving optimized image to ${outputPath}`);
           await this.outputAdapter.save(outputPath, data);

@@ -10,20 +10,23 @@ import {
   ImageFormat,
   imageFormats,
 } from '@imagejs/core'
+import { Readable } from 'stream';
 
 export const isENOENT = (error: unknown) => error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT';
 
 export default class FSAdapter extends Adapter {
   override readonly supportsSave = true;
-  override readonly supportsLoad = true;
+  override readonly supportsList = true;
   override readonly supportsDelete = true;
+  override readonly supportsClean = true;
+  override readonly supportsStream = true;
 
   constructor(path: string, options?: Partial<AdapterOptions>) {
     super(path, options);
   }
 
-  override async fetch(id: string): Promise<AdapterResult | undefined> {
-    const imagePath = path.join(this.basePath, id);
+  override async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
+    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
     const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
       throw new Error(`Unsupported image format: ${fileExtension}`);
@@ -44,6 +47,11 @@ export default class FSAdapter extends Adapter {
       data: buffer,
     };
   }
+
+  override stream(id: string, prefixBase = true): Readable {
+    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
+    return fs.createReadStream(imagePath);
+  }
   
   override async save(id: string, data: Buffer): Promise<void> {
     const dir = path.dirname(id);
@@ -53,7 +61,7 @@ export default class FSAdapter extends Adapter {
     await fs.promises.writeFile(id, data);
   }
 
-  override async loadImages(dir: string): Promise<string[]> {
+  override async listImages(dir: string): Promise<string[]> {
     return glob(
       globPattern,
       {
@@ -70,5 +78,13 @@ export default class FSAdapter extends Adapter {
     } catch (error) {
       throw new Error(`Could not delete file at path "${id}": ${error}`);
     }
+  }
+
+  override async clean(): Promise<void> {
+    try {
+      await fs.promises.rmdir(this.basePath, { recursive: true });
+    } catch (error) {
+      throw new Error(`Could not clean directory at path "${this.basePath}": ${error}`);
+    }  
   }
 }

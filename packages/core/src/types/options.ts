@@ -1,3 +1,5 @@
+import { HashOptions } from '../modules';
+
 export type ImageFormat = 'jpg' | 'jpeg' | 'png' | 'webp' | 'avif' | 'tiff' | 'gif' | 'heif' | 'raw';
 
 export type SizeByWidth = {
@@ -49,4 +51,8 @@ export type ImageJSOptions = {
    * @default 'optimized'
    */
   outputDir?: string;
+  /**
+   * Configuration options for the hash cache
+   */
+  hashOptions?: Partial<HashOptions>;
 };

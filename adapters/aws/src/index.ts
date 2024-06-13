@@ -20,8 +20,10 @@ import {
 export default class AWSAdapter extends Adapter {
   private readonly client: S3Client;
   override readonly supportsSave = true;
-  override readonly supportsLoad = true;
+  override readonly supportsList = true;
   override readonly supportsDelete = true;
+  override readonly supportsClean = true;
+  override readonly supportsStream = false;
 
   constructor(
     s3: S3Client | S3ClientConfig,
@@ -33,8 +35,8 @@ export default class AWSAdapter extends Adapter {
     this.client = s3 instanceof S3Client ? s3 : new S3Client(s3);
   }
 
-  override async fetch(id: string): Promise<AdapterResult | undefined> {
-    const imagePath = path.join(this.basePath, id);
+  override async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
+    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
     const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
       throw new Error(`Unsupported image format: ${fileExtension}`);
@@ -57,11 +59,14 @@ export default class AWSAdapter extends Adapter {
           format: fileExtension,
         });
       } catch (err) {
+        if (typeof err === 'object' && err !== null && 'Code' in err && err.Code === 'NoSuchKey') {
+          return resolve(undefined)
+        }
         return reject(err)
       } 
     })
   }
-  
+
   override async save(id: string, data: Buffer): Promise<void> {
     await this.client.send(new PutObjectCommand({
       Bucket: this.bucket,
@@ -70,7 +75,7 @@ export default class AWSAdapter extends Adapter {
     }));
   }
 
-  override async loadImages(dir: string): Promise<string[]> {
+  override async listImages(dir: string): Promise<string[]> {
     const response = await this.client.send(new ListObjectsV2Command({
       Bucket: this.bucket,
       Prefix: dir,
@@ -86,5 +91,10 @@ export default class AWSAdapter extends Adapter {
       Bucket: this.bucket,
       Key: id,
     }));
+  }
+
+  override async clean(): Promise<void> {
+    const images = await this.listImages(this.basePath);
+    await Promise.all(images.map((image) => this.delete(image)));
   }
 }

@@ -3,7 +3,7 @@ import { resolveSharpTransformer, resolveSize } from '../helpers';
 import { ImageFormat, ImageSize } from '../types';
 
 export type TransformImageInput = {
-  image: string;
+  image: Buffer;
   size: ImageSize;
   format: ImageFormat;
   progressive?: boolean;
@@ -19,11 +19,12 @@ export type TransformImageInput = {
 export class ImageTransformer {
   protected static readonly log = debug('imagejs:transformer');
   static async transformImage(input: TransformImageInput) {
-    this.log(`Transforming image "${input.image}" to size ${JSON.stringify(input.size)} and format "${input.format}"`);
+    this.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
     const {
       image, size, format, progressive,
       trim, crop, flip, flop, blur, grayscale, gravity,
     } = input;
+
     const resolvedSize = resolveSize(size);
     const transformer = resolveSharpTransformer(image, format)({ 
       quality: resolvedSize.quality,

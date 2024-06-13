@@ -1,4 +1,4 @@
-import fetch from 'cross-fetch';
+import axios from 'axios';
 import {
   Adapter,
   AdapterResult,
@@ -8,10 +8,11 @@ import {
 } from '@imagejs/core'
 
 import pkg from '../package.json';
+import { Readable } from 'stream';
 
 export default class HTTPAdapter extends Adapter {
   public prefixURL: string = this.basePath
-  private readonly fetchOptions: RequestInit = {
+  private readonly fetchOptions: axios.AxiosRequestConfig = {
     headers: {
       'User-Agent': `${pkg.name}/${pkg.version}`,
       'Accept': 'image/*',
@@ -19,11 +20,23 @@ export default class HTTPAdapter extends Adapter {
   };
 
   override readonly supportsSave = false;
-  override readonly supportsLoad = false;
+  override readonly supportsList = false;
   override readonly supportsDelete = false;
+  override readonly supportsClean = false;
+  override readonly supportsStream = true;
 
-  constructor(prefixURL: string, options?: Partial<AdapterOptions>) {
+  private readonly _client: axios.AxiosInstance;
+
+  constructor(
+    prefixURL: string,
+    options?: Partial<AdapterOptions>,
+    axiosOptions?: axios.CreateAxiosDefaults,
+  ) {
     super(prefixURL, options);
+    this._client = axios.create({
+      ...axiosOptions,
+      baseURL: prefixURL,
+    });
   }
 
   override async fetch(id: string): Promise<AdapterResult | undefined> {
@@ -31,7 +44,7 @@ export default class HTTPAdapter extends Adapter {
 
     let response: Response;
     try {
-      response = await fetch(fullURL, this.fetchOptions);
+      response = await this._client.get(fullURL, this.fetchOptions);
     } catch (error) {
       throw new Error(`Could not fetch image at URL "${fullURL}": ${error}`);
     }
@@ -59,5 +72,14 @@ export default class HTTPAdapter extends Adapter {
       format: fileExtension,
       data: buffer,
     };
+  }
+
+  override async stream(_id: string): Promise<Readable> {
+    const response = await this._client.get(_id, {
+      responseType: 'stream',
+      ...this.fetchOptions,
+    });
+
+    return response.data
   }
 }
