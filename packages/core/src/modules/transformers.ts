@@ -29,7 +29,8 @@ export class ImageTransformer {
   protected static readonly log = debug('imagejs:transformer');
 
   static cacheKey(input: TransformImageInput) {
-    return `transform:${input.resourceId}-${ImageTransformer.hashCache.computeAnyHash(input)}`;
+    const { size, format, progressive, trim, crop, flip, flop, blur, grayscale, gravity } = input;
+    return `transform:${input.resourceId}-${ImageTransformer.hashCache.computeAnyHash({ size, format, progressive, trim, crop, flip, flop, blur, grayscale, gravity })}`;
   }
 
   static async transformImage(input: TransformImageInput) {
