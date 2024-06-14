@@ -10,31 +10,36 @@ export type HashOptions = {
   algorithm: Algorithm;
   encoding: Encoding;
   length: number;
+  ttl: number | null;
+  maxEntries: number | null;
 }
 
-export class AdapterCache implements HashOptions {
+export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>{
   public algorithm: Algorithm;
   public encoding: Encoding;
   public length: number;
+  public ttl: number | null;
+  public maxEntries: number | null;
   static readonly defaults: HashOptions = {
     algorithm: 'sha256',
     encoding: 'hex',
     length: 14,
+    ttl: null,
+    maxEntries: null,
   }
   readonly log = debug('imagejs:cache');
+  protected _cache: Map<K, V> = new Map<K, V>();
 
   constructor(options: Partial<HashOptions> = {}) {
-    this.algorithm = options.algorithm ?? AdapterCache.defaults.algorithm;
-    this.encoding = options.encoding ?? AdapterCache.defaults.encoding;
-    this.length = options.length ?? AdapterCache.defaults.length;
+    this.algorithm = options.algorithm ?? HashCache.defaults.algorithm;
+    this.encoding = options.encoding ?? HashCache.defaults.encoding;
+    this.length = options.length ?? HashCache.defaults.length;
+    this.ttl = options.ttl ?? HashCache.defaults.ttl;
+    this.maxEntries = options.maxEntries ?? HashCache.defaults.maxEntries;
 
     if (this.length <= 0) {
       throw new Error('The hash length must be greater than 0');
     }
-
-    this.loadCache(this._cachePath).then(() => {
-      this.throttleSaveCache(this._cachePath);
-    })
   }
 
   computeBufferHash(
@@ -75,34 +80,36 @@ export class AdapterCache implements HashOptions {
   }
 
   /**
-   * Get the hash for an identifier.
-   * @param id - The identifier to get the hash for.
-   * @returns The hash for the identifier.
+   * Get the value for an identifier from the cache.
+   * @param id - The identifier to get the value for.
+   * @returns The value for the identifier.
    */
-  get(id: string) {
-    this.log(`Getting hash for identifier "${id}"`);
+  get(id: K) {
+    this.log(`Getting value for identifier "${id}"`);
     return this._cache.get(id);
   }
 
   /**
-   * Set the hash for an identifier.
-   * @param id - The identifier to set the hash for.
-   * @param hash - The hash to set for the identifier.
+   * Set the value for an identifier.
+   * @param id - The identifier to set the value for.
+   * @param value - The value to associate with the identifier.
    */
-  set(id: string, hash: string) {
-    this.log(`Setting hash for identifier "${id}"`);
-    this._cache.set(id, hash);
-    this.throttleSaveCache();
+  set(id: K, value: V) {
+    this.log(`Setting value for identifier "${id}"`);
+    this._cache.set(id, value);
+    this.handleConstraints(id)
+    return this;
   }
 
   /**
-   * Delete the hash for an identifier.
-   * @param id - The identifier to delete the hash for.
+   * Delete the value for an identifier.
+   * @param id - The identifier to delete the value for.
    */
-  delete(id: string) {
-    this.log(`Deleting hash for identifier "${id}"`);
-    this._cache.delete(id);
-    this.throttleSaveCache();
+  delete(id: K) {
+    this.log(`Deleting value for identifier "${id}"`);
+    const deleted = this._cache.delete(id);
+    this.expiryMap.delete(id);
+    return deleted;
   }
 
   /**
@@ -111,24 +118,139 @@ export class AdapterCache implements HashOptions {
   clear() {
     this.log(`Clearing cache`);
     this._cache.clear();
-    this.throttleSaveCache();
   }
 
   /**
-   * A cache for storing hashes of anything.
-   * The key is the identifier you query the cache with.
-   * The value is the hash of the identifier.
-   * 
-   * Say you have a file `image.jpg` and wan to check if it
-   * has changed since you last checked. You would query the
-   * cache with the file path `image.jpg` and get the hash
-   * of the file. If the hash is different from the last time
-   * you checked, the file has changed.
+   * Check if the cache contains a value for an identifier.
+   * @param id - The identifier to check for.
+   * @returns Whether the cache contains a value for the identifier.
    */
-  private _cache: Map<string, string> = new Map();
+  has(id: K) {
+    this.log(`Checking if cache contains value for identifier "${id}"`);
+    return this._cache.has(id);
+  }
+
+  /**
+   * Get the number of entries in the cache.
+   * @returns The number of entries in the cache.
+   */
+  get size() {
+    return this._cache.size;
+  }
+
+  /**
+   * Iterate over the entries in the cache.
+   * @param callback - The callback to invoke for each entry.
+   */
+  forEach(callback: (value: V, key: K, map: Map<K, V>) => void) {
+    this._cache.forEach(callback);
+  }
+
+  /**
+   * Get the keys in the cache.
+   * @returns The keys in the cache.
+   */
+  keys() {
+    return this._cache.keys();
+  }
+
+  /**
+   * Get the entries in the cache.
+   * @returns The entries in the cache.
+   */
+  entries() {
+    return this._cache.entries();
+  }
+
+  /**
+   * Get the values in the cache.
+   * @returns The values in the cache.
+   */
+  values() {
+    return this._cache.values();
+  }
+
+
+  /**
+   * Iterate over the entries in the cache.
+   * @returns An iterator for the entries in the cache.
+   */
+  [Symbol.iterator]() {
+    return this._cache[Symbol.iterator]();
+  }
+
+  /**
+   * Get the string tag for the cache.
+   */
+  [Symbol.toStringTag]: 'CacheMap' = 'CacheMap';
+
+  // Handle TTL and max entries (Cache constraints)
+  protected expiryMap: Map<K, {
+    ts: number;
+    timeout: NodeJS.Timeout;
+  }> = new Map<K, {
+    ts: number;
+    timeout: NodeJS.Timeout;
+  }>();
+  private hasTTL(): this is HashCache & {
+    ttl: number;
+  } {
+    return this.ttl !== null;
+  }
+  private hasMaxEntries() {
+    return this.maxEntries !== null && this._cache.size >= this.maxEntries;
+  }
+  protected handleConstraints(id: K) {
+    if (this.hasTTL()) {
+      const current = this.expiryMap.get(id);
+      if (current) clearTimeout(current.timeout);
+      this.expiryMap.set(id, {
+        ts: Date.now(),
+        timeout: setTimeout(() => {
+          this.delete(id);
+        }, this.ttl)
+      });
+    }
+    if (this.hasMaxEntries()) {
+      const first = this._cache.keys().next().value;
+      this.delete(first);
+    }
+  }
+}
+
+export class PersistentHashCache extends HashCache {
   private _cachePath: string = '.cache';
   private _cacheSaveEvery: number = 5000;
   private _cacheHash: string | null = null;
+
+  constructor(options: Partial<HashOptions> = {}) {
+    super(options);
+    this.loadCache(this._cachePath).then(() => {
+      this.throttleSaveCache(this._cachePath);
+    })
+  }
+
+  override set(id: string, value: string) {
+    super.set(id, value);
+    this.throttleSaveCache();
+    return this;
+  }
+
+  override delete(id: string) {
+    const deleted = super.delete(id);
+    this.throttleSaveCache();
+    return deleted;
+  }
+
+  override clear() {
+    super.clear();
+    this.throttleSaveCache();
+  }
+
+  override handleConstraints(id: string) {
+    super.handleConstraints(id);
+    this.throttleSaveCache();
+  }
 
   /**
    * Load the cache into memory from a file.

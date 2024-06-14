@@ -1,7 +1,7 @@
 import path from 'path';
 
 import debug from 'debug';
-import { Adapter, AdapterCache, PrivateAdapter } from '.';
+import { Adapter, PersistentHashCache, PrivateAdapter } from '.';
 import { MappedImages, OptimizedImageData } from '../types/wrapper';
 import { ImageFormat, ImageJSOptions, ImageSize, ImageSizes, SizeKey } from '../types';
 import { defaultSizes, removeImageFormat } from '../helpers';
@@ -13,7 +13,8 @@ export class ImageJS implements ImageJSOptions {
   public sizes: ImageSizes;
   public targetFormat: ImageFormat = 'webp';
   protected readonly log = debug('imagejs');
-  private readonly hashCache: AdapterCache;
+  private readonly hashCache: PersistentHashCache;
+  public transformer = ImageTransformer;
   constructor(
     inputAdapter: Adapter,
     outputAdapter: Adapter,
@@ -31,10 +32,10 @@ export class ImageJS implements ImageJSOptions {
     if (options?.targetFormat) {
       this.targetFormat = options.targetFormat;
     }
-    this.hashCache = new AdapterCache({
-      algorithm: options?.hashOptions?.algorithm ?? AdapterCache.defaults.algorithm,
-      encoding: options?.hashOptions?.encoding ?? AdapterCache.defaults.encoding,
-      length: options?.hashOptions?.length ?? AdapterCache.defaults.length,
+    this.hashCache = new PersistentHashCache({
+      algorithm: options?.hashOptions?.algorithm ?? PersistentHashCache.defaults.algorithm,
+      encoding: options?.hashOptions?.encoding ?? PersistentHashCache.defaults.encoding,
+      length: options?.hashOptions?.length ?? PersistentHashCache.defaults.length,
     });
   }
 
@@ -71,12 +72,14 @@ export class ImageJS implements ImageJSOptions {
    * @returns The optimized image as a Buffer
    */
   async optimizeImage(
+    resourceId: string,
     image: Buffer,
     size: ImageSize,
     format: ImageFormat = 'webp',
   ): Promise<Buffer> {
     this.log(`Optimizing image with size ${JSON.stringify(size)} and format ${format}`);
-    return ImageTransformer.transformImage({
+    return this.transformer.transformImage({
+      resourceId,
       image,
       size,
       format,
@@ -277,7 +280,7 @@ export class ImageJS implements ImageJSOptions {
       if (callback) callback(image, response.data);
       const innerPromises = Object.entries(this.sizes).map(async ([sizeKey, size]) => {
         const outputPath = this.resolveId(image, sizeKey as SizeKey, outputDir);
-        const data = await this.optimizeImage(response.data, size);
+        const data = await this.optimizeImage(image, response.data, size);
         if (save && this.outputAdapter.supportsSave) {
           this.outputAdapter.log(`Saving optimized image to ${outputPath}`);
           await this.outputAdapter.save(outputPath, data);

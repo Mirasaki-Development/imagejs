@@ -1,8 +1,10 @@
 import debug from 'debug';
 import { resolveSharpTransformer, resolveSize } from '../helpers';
 import { ImageFormat, ImageSize } from '../types';
+import { HashCache } from './cache';
 
 export type TransformImageInput = {
+  resourceId: string;
   image: Buffer;
   size: ImageSize;
   format: ImageFormat;
@@ -17,9 +19,29 @@ export type TransformImageInput = {
 };
 
 export class ImageTransformer {
+  static hashCache = new HashCache<string, Buffer>({
+    algorithm: 'sha256',
+    encoding: 'hex',
+    length: 14,
+    ttl: null,
+    maxEntries: 1000,
+  });
   protected static readonly log = debug('imagejs:transformer');
+
+  static cacheKey(input: TransformImageInput) {
+    return `transform:${input.resourceId}-${ImageTransformer.hashCache.computeAnyHash(input)}`;
+  }
+
   static async transformImage(input: TransformImageInput) {
-    this.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
+    ImageTransformer.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
+
+    const cacheKey = ImageTransformer.cacheKey(input);
+    const cached = ImageTransformer.hashCache.get(cacheKey);
+    if (cached) {
+      ImageTransformer.log(`Found cached image for key "${cacheKey}"`);
+      return cached;
+    }
+
     const {
       image, size, format, progressive,
       trim, crop, flip, flop, blur, grayscale, gravity,
@@ -54,19 +76,22 @@ export class ImageTransformer {
     }
 
     if (crop) {
-      this.log(`Cropping image to size ${JSON.stringify(resolvedSize)} with gravity "${gravity}"`);
+      ImageTransformer.log(`Cropping image to size ${JSON.stringify(resolvedSize)} with gravity "${gravity}"`);
       transformer.resize(resolvedSize.width, resolvedSize.height, {
         fit: 'cover',
         position: gravity ?? 'center',
       });
     } else {
-      this.log(`Resizing image to size (fit:inside) with width ${resolvedSize.width} and height ${resolvedSize.height}`);
+      ImageTransformer.log(`Resizing image to size (fit:inside) with width ${resolvedSize.width} and height ${resolvedSize.height}`);
       transformer.resize(resolvedSize.width, resolvedSize.height, {
         fit: 'inside',
         withoutEnlargement: true,
       });
     }
 
-    return await transformer.toBuffer()
+    const buffer = await transformer.toBuffer()
+    ImageTransformer.hashCache.set(cacheKey, buffer);
+
+    return buffer;
   }
 }
