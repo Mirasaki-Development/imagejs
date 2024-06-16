@@ -7,6 +7,7 @@ import {
   PutObjectCommand,
   ListObjectsV2Command,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from '@aws-sdk/client-s3'
 
 import {
@@ -35,11 +36,27 @@ export default class AWSAdapter extends Adapter {
     this.client = s3 instanceof S3Client ? s3 : new S3Client(s3);
   }
 
+  override async has(id: string, prefixBase = true): Promise<boolean> {
+    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
+    try {
+      await this.client.send(new HeadObjectCommand({
+        Bucket: this.bucket,
+        Key: imagePath,
+      }));
+      return true;
+    } catch (err: any) {
+      if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
   override async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
     const imagePath = prefixBase ? path.join(this.basePath, id) : id;
     const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
-      throw new Error(`Unsupported image format: ${fileExtension}`);
+      undefined;
     }
 
     return new Promise(async (resolve, reject) => {
@@ -83,7 +100,7 @@ export default class AWSAdapter extends Adapter {
     if (!response.Contents) return [];
     return (response.Contents
       .map((content) => content.Key)
-      .filter(Boolean) as string[]) ?? [];
+      .filter((key): key is string => !!key));
   }
 
   override async delete(id: string): Promise<void> {

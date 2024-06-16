@@ -24,7 +24,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
     algorithm: 'sha256',
     encoding: 'hex',
     length: 14,
-    ttl: null,
+    ttl: 1000 * 60 * 60, // 1 hour
     maxEntries: null,
   }
   readonly log = debug('imagejs:cache');
@@ -93,11 +93,12 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
    * Set the value for an identifier.
    * @param id - The identifier to set the value for.
    * @param value - The value to associate with the identifier.
+   * @param ttl - The time-to-live for the value.
    */
-  set(id: K, value: V) {
+  set(id: K, value: V, ttl: number | null = this.ttl) {
     this.log(`Setting value for identifier "${id}"`);
     this._cache.set(id, value);
-    this.handleConstraints(id)
+    this.handleConstraints(id, ttl)
     return this;
   }
 
@@ -200,15 +201,15 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
   private hasMaxEntries() {
     return this.maxEntries !== null && this._cache.size >= this.maxEntries;
   }
-  protected handleConstraints(id: K) {
-    if (this.hasTTL()) {
+  protected handleConstraints(id: K, ttl: number | null = this.ttl) {
+    if (typeof ttl === 'number' || this.hasTTL()) {
       const current = this.expiryMap.get(id);
       if (current) clearTimeout(current.timeout);
       this.expiryMap.set(id, {
         ts: Date.now(),
         timeout: setTimeout(() => {
           this.delete(id);
-        }, this.ttl)
+        }, typeof ttl === 'number' ? ttl : this.ttl as number)
       });
     }
     if (this.hasMaxEntries()) {
@@ -230,8 +231,8 @@ export class PersistentHashCache extends HashCache {
     })
   }
 
-  override set(id: string, value: string) {
-    super.set(id, value);
+  override set(id: string, value: string, ttl: number | null = this.ttl) {
+    super.set(id, value, ttl);
     this.throttleSaveCache();
     return this;
   }
@@ -247,8 +248,8 @@ export class PersistentHashCache extends HashCache {
     this.throttleSaveCache();
   }
 
-  override handleConstraints(id: string) {
-    super.handleConstraints(id);
+  override handleConstraints(id: string, ttl: number | null = this.ttl) {
+    super.handleConstraints(id, ttl);
     this.throttleSaveCache();
   }
 

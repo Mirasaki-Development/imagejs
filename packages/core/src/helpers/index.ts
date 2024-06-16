@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { ImageFormat, ImageSize, ImageSizes, SizeByDimensions, SizeOptions } from '../types';
+import { ImageFormat, ImageSize, ImageSizes, SizeByDimensions, SizeKey, SizeOptions } from '../types';
 
 export const imageFormats: ImageFormat[] = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'tiff', 'gif', 'heif'];
 
@@ -12,6 +12,8 @@ export const defaultSizes: ImageSizes = {
   large: { size: 1280, quality: 90 },
   original: { size: null, },
 };
+
+export const sizeKeys: SizeKey[] = ['blur', 'small', 'medium', 'large', 'original'];
 
 export const resolveSize = (
   size: ImageSize,

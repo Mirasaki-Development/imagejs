@@ -55,4 +55,12 @@ export type ImageJSOptions = {
    * Configuration options for the hash cache
    */
   hashOptions?: Partial<HashOptions>;
+  /**
+   * Configuration options for the image cache
+   */
+  imageCacheOptions?: Partial<HashOptions>;
+  /**
+   * Should any sizes be permanently cached?
+   */
+  permCacheSizes?: Partial<Record<SizeKey, boolean>>;
 };

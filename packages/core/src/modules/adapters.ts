@@ -4,9 +4,9 @@ import { Readable } from 'stream';
 
 export type AdapterType = 'input' | 'output';
 
-export type AdapterResult = {
-  format: ImageFormat | null;
-  data: Buffer;
+export type AdapterResult<T = Buffer> = {
+  format: ImageFormat;
+  data: T;
 };
 
 export type AdapterOptions = {
@@ -27,10 +27,13 @@ export type AdapterOptions = {
 };
 
 export type AdapterFunctions = {
-  fetch: (id: string) => Promise<AdapterResult | undefined>;
-  save: (id: string, data: Buffer) => Promise<void>;
-  listImages: (dir: string) => Promise<string[]>;
-  delete: (id: string) => Promise<void>;
+  has: (id: string, prefixBase?: boolean) => boolean | Promise<boolean>;
+  fetch: (id: string, prefixBase?: boolean) => Promise<AdapterResult | undefined>;
+  stream: (id: string, prefixBase?: boolean) => undefined | AdapterResult<Readable> | Promise<undefined | AdapterResult<Readable>>;
+  save: (id: string, data: Buffer) => void | Promise<void>;
+  listImages: (dir: string) => string[] | Promise<string[]>;
+  delete: (id: string) => void | Promise<void>;
+  clean: () => void | Promise<void>;
 };
 
 export type AdapterConstructor = {
@@ -55,11 +58,15 @@ export class Adapter implements AdapterFunctions, AdapterOptions {
     this.ignorePatterns = options?.ignorePatterns ?? [];
   }
 
+  has(_id: string, _prefixBase = true): boolean | Promise<boolean> {
+    throw new Error('Method not implemented.');
+  }
+
   fetch(_id: string, _prefixBase = true): Promise<AdapterResult | undefined> {
     throw new Error('Method not implemented.');
   }
 
-  stream(_id: string, _prefixBase = true): Readable | Promise<Readable> {
+  stream(_id: string, _prefixBase = true): undefined | AdapterResult<Readable> | Promise<undefined | AdapterResult<Readable>> {
     throw new Error('Method not implemented.');
   }
 
@@ -109,11 +116,16 @@ export class PrivateAdapter implements Adapter {
     this.basePath = _adapter.basePath;
     this.ignorePatterns = _adapter.ignorePatterns;
   }
+
+  async has(id: string, prefixBase = true): Promise<boolean> {
+    return this._adapter.has(id, prefixBase);
+  }
+
   async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
     return this._adapter.fetch(id, prefixBase);
   }
 
-  async stream(id: string, prefixBase = true): Promise<Readable> {
+  async stream(id: string, prefixBase = true): Promise<undefined | AdapterResult<Readable>> {
     return await this._adapter.stream(id, prefixBase);
   }
 

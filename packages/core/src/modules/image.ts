@@ -1,11 +1,13 @@
 import path from 'path';
 
 import debug from 'debug';
-import { Adapter, PersistentHashCache, PrivateAdapter } from '.';
+import { Adapter, HashCache, PersistentHashCache, PrivateAdapter, defaultTransformQueryParams } from '.';
 import { MappedImages, OptimizedImageData } from '../types/wrapper';
 import { ImageFormat, ImageJSOptions, ImageSize, ImageSizes, SizeKey } from '../types';
 import { defaultSizes, removeImageFormat } from '../helpers';
 import { ImageTransformer } from './transformers';
+import { AdapterResult } from '../../dist';
+import { Readable } from 'stream';
 
 export class ImageJS implements ImageJSOptions {
   public inputAdapter: PrivateAdapter;
@@ -14,7 +16,7 @@ export class ImageJS implements ImageJSOptions {
   public targetFormat: ImageFormat = 'webp';
   protected readonly log = debug('imagejs');
   private readonly hashCache: PersistentHashCache;
-  public transformer = ImageTransformer;
+  public readonly transformer: ImageTransformer;
   constructor(
     inputAdapter: Adapter,
     outputAdapter: Adapter,
@@ -36,7 +38,19 @@ export class ImageJS implements ImageJSOptions {
       algorithm: options?.hashOptions?.algorithm ?? PersistentHashCache.defaults.algorithm,
       encoding: options?.hashOptions?.encoding ?? PersistentHashCache.defaults.encoding,
       length: options?.hashOptions?.length ?? PersistentHashCache.defaults.length,
+      ttl: options?.hashOptions?.ttl ?? PersistentHashCache.defaults.ttl,
+      maxEntries: options?.hashOptions?.maxEntries ?? PersistentHashCache.defaults.maxEntries,
     });
+    this.transformer = new ImageTransformer(new HashCache<string, Buffer>({
+      algorithm: options?.imageCacheOptions?.algorithm ?? HashCache.defaults.algorithm,
+      encoding: options?.imageCacheOptions?.encoding ?? HashCache.defaults.encoding,
+      length: options?.imageCacheOptions?.length ?? HashCache.defaults.length,
+      ttl: options?.imageCacheOptions?.ttl ?? HashCache.defaults.ttl,
+      maxEntries: options?.imageCacheOptions?.maxEntries ?? HashCache.defaults.maxEntries
+    }));
+    for (const [k,v] of Object.entries(options?.permCacheSizes ?? {})) {
+      if (v) this.permanentlyCacheImageSize(k as SizeKey);
+    }
   }
 
   /**
@@ -48,18 +62,23 @@ export class ImageJS implements ImageJSOptions {
    * 
    * @param id The relative path of the original image
    * @param size The preferred size of the image
+   * @param outputPath (overwrite) The output path for the optimized image
    * @returns The resolved id of the (optimized) image
    */
   resolveId(
     id: string,
     size: SizeKey,
+    format?: ImageFormat,
     outputPath?: string
   ): string {
     const resolved = path.join(
       outputPath ?? this.outputAdapter.basePath,
       size,
-      `${removeImageFormat(id.replace(this.inputAdapter.basePath, ''))}.${this.targetFormat}`
+      `${removeImageFormat(id.replace(this.inputAdapter.basePath, ''))}.${format ?? this.targetFormat}`
     );
+    // if (format && format !== this.targetFormat) {
+    //   resolved = resolved.replace(path.extname(resolved), format)
+    // }
     this.log(`Resolved id for "${id}" with size ${size}: ${resolved}`);
     return resolved;
   }
@@ -75,15 +94,15 @@ export class ImageJS implements ImageJSOptions {
     resourceId: string,
     image: Buffer,
     size: ImageSize,
-    format: ImageFormat = 'webp',
+    format: ImageFormat = this.targetFormat,
   ): Promise<Buffer> {
     this.log(`Optimizing image with size ${JSON.stringify(size)} and format ${format}`);
     return this.transformer.transformImage({
+      ...defaultTransformQueryParams,
       resourceId,
       image,
       size,
       format,
-      progressive: true,
     })
   }
 
@@ -206,7 +225,8 @@ export class ImageJS implements ImageJSOptions {
 
     const response = await Promise.all(
       resolvedImages.map(async (e) => {
-        const hashKey = await this.hashCache.computeStreamHash(await this.inputAdapter.stream(e, false));
+        const stream = await this.inputAdapter.stream(e, false) as AdapterResult<Readable>;
+        const hashKey = await this.hashCache.computeStreamHash(stream.data);
         const fromCache = this.hashCache.get(e);
         if (fromCache === hashKey) {
           this.hashCache.log(`Image "${e}" has not changed`);
@@ -228,6 +248,32 @@ export class ImageJS implements ImageJSOptions {
     const mappedImages = this.mapOptimizedImages(optimizedImages);
     this.hashCache.log('Updated/changed images: %O', mappedImages);
     return Object.keys(mappedImages)
+  }
+
+  async permanentlyCacheImageSize(size: SizeKey) {
+    if (!this.sizes[size]) {
+      this.log(`Size "${size}" does not exist`);
+      return;
+    }
+    if (!this.inputAdapter.supportsList) {
+      this.inputAdapter.log('This adapter does not support listing images');
+      return;
+    }
+    this.log(`Permanently caching size "${size}"`);
+    const images = await this.inputAdapter.listImages(this.inputAdapter.basePath);
+    const promises = images.map(async (image) => {
+      const imageSizeId = this.resolveId(image, size, this.targetFormat);
+      this.log(`Permanently caching image "${imageSizeId}"`);
+      const response = await this.outputAdapter.fetch(imageSizeId, false) as AdapterResult<Buffer>;
+      const cacheKey = this.transformer.cacheKey({
+        resourceId: imageSizeId,
+        size: this.sizes[size],
+        format: this.targetFormat,
+        ...defaultTransformQueryParams
+      });
+      this.transformer.hashCache.set(cacheKey, response.data, null);
+    });
+    await Promise.all(promises);
   }
 
   /**
@@ -275,11 +321,10 @@ export class ImageJS implements ImageJSOptions {
       : inputDir;
     this.log('Images to optimize: %O', images);
     const promises = images.map(async (image) => {
-      const response = await this.inputAdapter.fetch(image, false)
-      if (!response) throw new Error(`Could not fetch image at path "${image}", please create a GitHub issue`);
+      const response = await this.inputAdapter.fetch(image, false) as AdapterResult<Buffer>;
       if (callback) callback(image, response.data);
       const innerPromises = Object.entries(this.sizes).map(async ([sizeKey, size]) => {
-        const outputPath = this.resolveId(image, sizeKey as SizeKey, outputDir);
+        const outputPath = this.resolveId(image, sizeKey as SizeKey, this.targetFormat, outputDir);
         const data = await this.optimizeImage(image, response.data, size);
         if (save && this.outputAdapter.supportsSave) {
           this.outputAdapter.log(`Saving optimized image to ${outputPath}`);

@@ -1,60 +1,79 @@
 import debug from 'debug';
 import { resolveSharpTransformer, resolveSize } from '../helpers';
-import { ImageFormat, ImageSize } from '../types';
+import { ImageSize, QueryParams, TransformQueryParams } from '../types';
 import { HashCache } from './cache';
+import { Matrix3x3 } from 'sharp';
 
-export type TransformImageInput = {
+export type TransformImageInput = Omit<QueryParams & TransformQueryParams & {
   resourceId: string;
-  image: Buffer;
+}, 'size'> & {
   size: ImageSize;
-  format: ImageFormat;
-  progressive?: boolean;
-  trim?: boolean;
-  crop?: boolean;
-  flip?: boolean;
-  flop?: boolean;
-  blur?: boolean;
-  grayscale?: boolean;
-  gravity?: string;
 };
 
-export class ImageTransformer {
-  static hashCache = new HashCache<string, Buffer>({
-    algorithm: 'sha256',
-    encoding: 'hex',
-    length: 14,
-    ttl: null,
-    maxEntries: 1000,
-  });
-  protected static readonly log = debug('imagejs:transformer');
+export type TransformImageInputWithBuffer = TransformImageInput & {
+  image: Buffer;
+}
 
-  static cacheKey(input: TransformImageInput) {
-    const { size, format, progressive, trim, crop, flip, flop, blur, grayscale, gravity } = input;
-    return `transform:${input.resourceId}-${ImageTransformer.hashCache.computeAnyHash({ size, format, progressive, trim, crop, flip, flop, blur, grayscale, gravity })}`;
+export class ImageTransformer {
+  hashCache: HashCache<string, Buffer>;
+  
+  constructor(cache: HashCache<string, Buffer>) {
+    this.hashCache = cache
   }
 
-  static async transformImage(input: TransformImageInput) {
-    ImageTransformer.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
+  protected readonly log = debug('imagejs:transformer');
 
-    const cacheKey = ImageTransformer.cacheKey(input);
-    const cached = ImageTransformer.hashCache.get(cacheKey);
+  cacheKey(input: TransformImageInput) {
+    const { format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim, } = input;
+    return `transform:${input.resourceId}-${this.hashCache.computeAnyHash({ format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim, })}`;
+  }
+
+  async transformImage(input: TransformImageInputWithBuffer) {
+    this.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
+
+    const cacheKey = this.cacheKey(input);
+    const cached = this.hashCache.get(cacheKey);
     if (cached) {
-      ImageTransformer.log(`Found cached image for key "${cacheKey}"`);
+      this.log(`Found cached image for key "${cacheKey}"`);
       return cached;
     }
 
     const {
-      image, size, format, progressive,
-      trim, crop, flip, flop, blur, grayscale, gravity,
+      image, format, size, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim,
     } = input;
 
     const resolvedSize = resolveSize(size);
-    const transformer = resolveSharpTransformer(image, format)({ 
+    const transformer = resolveSharpTransformer(image, format)({
       quality: resolvedSize.quality,
-      progressive,
     });
 
     transformer.rotate(); // Rotate based on EXIF Orientation tag
+
+    // [DEV] Needs Aspect Ratio implementation
+    if (crop) {
+      this.log(`Cropping image to crop ${JSON.stringify(crop)} with gravity "${crop_gravity}"`);
+      const [width, height, x, y] = crop;
+      if (typeof x === 'number' && typeof y === 'number') {
+        transformer.extract({
+          left: x,
+          top: y,
+          width,
+          height,
+        });
+      }
+      else {
+        transformer.resize(width, height, {
+          fit: 'cover',
+          position: crop_gravity,
+        })
+      }
+    } else {
+      this.log(`Resizing image to size (fit:inside) with width ${resolvedSize.width} and height ${resolvedSize.height}`);
+      transformer.resize(resolvedSize.width, resolvedSize.height, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+    }
 
     if (flip) {
       transformer.flip();
@@ -62,6 +81,32 @@ export class ImageTransformer {
 
     if (flop) {
       transformer.flop();
+    }
+    
+    const resolvedBrightness = Math.min(Math.max(brightness, 0), 100);
+    const resolvedSaturation = Math.min(Math.max(saturation, 0), 100);
+    const resolvedHue = Math.min(Math.max(hue, 0), 100);
+    if (resolvedBrightness !== 0 || resolvedSaturation !== 0 || resolvedHue !== 0) {
+      transformer.modulate({
+        brightness: resolvedBrightness,
+        saturation: resolvedSaturation,
+        hue: resolvedHue,
+      });
+    }
+
+    const resolvedContrast = Math.min(Math.max(contrast, 0), 100);
+    if (resolvedContrast !== 0) {
+      transformer.linear(1 + resolvedContrast / 100, 1 + resolvedContrast / 100);
+    }
+
+    const resolvedSepia = Math.min(Math.max(sepia, 0), 100);
+    if (resolvedSepia !== 0) {
+      const sepiaMatrix: Matrix3x3 = [
+        [0.393 + 0.607 * (1 - resolvedSepia / 100), 0.769 - 0.769 * (1 - resolvedSepia / 100), 0.189 - 0.189 * (1 - resolvedSepia / 100)],
+        [0.349 - 0.349 * (1 - resolvedSepia / 100), 0.686 + 0.314 * (1 - resolvedSepia / 100), 0.168 - 0.168 * (1 - resolvedSepia / 100)],
+        [0.272 - 0.272 * (1 - resolvedSepia / 100), 0.534 - 0.534 * (1 - resolvedSepia / 100), 0.131 + 0.869 * (1 - resolvedSepia / 100)],
+      ];
+      transformer.recomb(sepiaMatrix);
     }
 
     if (grayscale) {
@@ -72,27 +117,24 @@ export class ImageTransformer {
       transformer.trim();
     }
 
-    if (blur) {
-      transformer.blur();
+    if (sharpen) {
+      transformer.sharpen();
     }
 
-    if (crop) {
-      ImageTransformer.log(`Cropping image to size ${JSON.stringify(resolvedSize)} with gravity "${gravity}"`);
-      transformer.resize(resolvedSize.width, resolvedSize.height, {
-        fit: 'cover',
-        position: gravity ?? 'center',
-      });
-    } else {
-      ImageTransformer.log(`Resizing image to size (fit:inside) with width ${resolvedSize.width} and height ${resolvedSize.height}`);
-      transformer.resize(resolvedSize.width, resolvedSize.height, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      });
+    const resolvedBlur = Math.min(Math.max(blur, 0), 100);
+    if (resolvedBlur !== 0) {
+      transformer.blur(resolvedBlur);
     }
 
-    const buffer = await transformer.toBuffer()
-    ImageTransformer.hashCache.set(cacheKey, buffer);
+    let buffer: Buffer;
+    try {
+      buffer = await transformer.toBuffer()
+    } catch (error) {
+      this.log(`Failed to transform image: ${error}`);
+      buffer = image;
+    }
 
+    this.hashCache.set(cacheKey, buffer);
     return buffer;
   }
 }

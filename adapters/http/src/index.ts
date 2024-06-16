@@ -39,6 +39,17 @@ export default class HTTPAdapter extends Adapter {
     });
   }
 
+  override async has(id: string): Promise<boolean> {
+    const fullURL = new URL(id, this.prefixURL).toString();
+
+    try {
+      await this._client.head(fullURL, this.fetchOptions);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   override async fetch(id: string): Promise<AdapterResult | undefined> {
     const fullURL = new URL(id, this.prefixURL).toString();
 
@@ -54,18 +65,18 @@ export default class HTTPAdapter extends Adapter {
     }
 
     if (!response.ok) {
-      throw new Error(`Could not fetch image at URL "${fullURL}": ${response.statusText}`);
+      return undefined;
     }
 
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.startsWith('image/')) {
-      throw new Error(`Could not fetch image at URL "${fullURL}": Invalid/unsupported content type "${contentType}"`);
+      return undefined;
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
     const fileExtension = contentType.split('/')[1] as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
-      throw new Error(`Unsupported image format: ${fileExtension}`);
+      return undefined;
     }
 
     return {
@@ -74,12 +85,24 @@ export default class HTTPAdapter extends Adapter {
     };
   }
 
-  override async stream(_id: string): Promise<Readable> {
+  override async stream(_id: string): Promise<undefined | AdapterResult<Readable>> {
+    const fileExtension = _id.split('.').pop() as ImageFormat;
+    if (!imageFormats.includes(fileExtension)) {
+      return undefined;
+    }
+
     const response = await this._client.get(_id, {
       responseType: 'stream',
       ...this.fetchOptions,
     });
 
-    return response.data
+    if (response.status === 404) {
+      return undefined;
+    }
+
+    return {
+      data: response.data,
+      format: fileExtension,
+    }
   }
 }

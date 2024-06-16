@@ -25,11 +25,20 @@ export default class FSAdapter extends Adapter {
     super(path, options);
   }
 
+  override async has(id: string, prefixBase = true): Promise<boolean> {
+    try {
+      await fs.promises.access(prefixBase ? path.join(this.basePath, id) : id);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   override async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
     const imagePath = prefixBase ? path.join(this.basePath, id) : id;
     const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
-      throw new Error(`Unsupported image format: ${fileExtension}`);
+      return undefined;
     }
 
     let buffer: Buffer;
@@ -48,9 +57,23 @@ export default class FSAdapter extends Adapter {
     };
   }
 
-  override stream(id: string, prefixBase = true): Readable {
+  override stream(id: string, prefixBase = true): undefined | AdapterResult<Readable> {
     const imagePath = prefixBase ? path.join(this.basePath, id) : id;
-    return fs.createReadStream(imagePath);
+    const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
+    if (!imageFormats.includes(fileExtension)) {
+      return undefined;
+    }
+    const stream = fs.createReadStream(imagePath);
+    stream.on('error', (error) => {
+      if (isENOENT(error)) {
+        return undefined;
+      }
+      throw new Error(`Could not read file at path "${imagePath}": ${error}`);
+    });
+    return {
+      data: stream,
+      format: fileExtension,
+    }
   }
   
   override async save(id: string, data: Buffer): Promise<void> {
