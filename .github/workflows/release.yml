@@ -67,7 +67,7 @@ jobs:
       - name: Use GitHub packages registry in .npmrc
         run: |
           cat << EOF > "$HOME/.npmrc"
-            @imagejs:registry=https://npm.pkg.github.com
+            @mirasaki-development:registry=https://npm.pkg.github.com
             //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
           EOF
         env:
