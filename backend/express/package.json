@@ -28,7 +28,7 @@
     "lint": "eslint src/ --max-warnings 0",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
-    "test": "jest --detectOpenHandles"
+    "test": "echo \"No standalone tests for package\""
   },
   "devDependencies": {
     "@imagejs/eslint-config": "workspace:*",

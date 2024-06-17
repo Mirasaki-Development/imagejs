@@ -1,6 +1,4 @@
 packages:
-  # Apps is only used in development for testing
-  - "apps/*"
   # Packages is used for shared code that is published to npm
   - "packages/*"
   # Adapters holds all the input and output adapters
@@ -8,4 +6,5 @@ packages:
   # Frontend holds all the frontend integrations - like react and vue
   - "frontend/*"
   # Backend holds all the backend integrations - like express and fastify
+  # along with out test suite - which encapsulates the library as a whole
   - "backend/*"

@@ -12,6 +12,7 @@ module.exports = {
   },
   env: {
     node: true,
+    jest: true,
   },
   settings: {
     "import/resolver": {

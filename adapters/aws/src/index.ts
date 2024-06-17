@@ -18,6 +18,8 @@ import {
   imageFormats,
 } from '@imagejs/core';
 
+export * from '@aws-sdk/client-s3';
+
 export default class AWSAdapter extends Adapter {
   private readonly client: S3Client;
   override readonly supportsSave = true;
@@ -95,10 +97,10 @@ export default class AWSAdapter extends Adapter {
     }));
   }
 
-  override async listImages(dir: string): Promise<string[]> {
+  override async listImages(dir?: string): Promise<string[]> {
     const response = await this.client.send(new ListObjectsV2Command({
       Bucket: this.bucket,
-      Prefix: dir,
+      Prefix: dir ?? this.basePath,
     }));
     if (!response.Contents) return [];
     return (response.Contents

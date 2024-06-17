@@ -1,7 +1,12 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# We ignore `apps` because it's only used in development
-apps
+# ImageJS Cache
+.cache
+
+# sample images for testing
+adapters/fs/src/__tests__/images/optimized
+backend/test-suite/public/images/optimized
+backend/test-suite/public/optimized
 
 # Dependencies
 node_modules

@@ -84,15 +84,16 @@ export default class FSAdapter extends Adapter {
     await fs.promises.writeFile(id, data);
   }
 
-  override async listImages(dir: string): Promise<string[]> {
+  override async listImages(dir?: string): Promise<string[]> {
+    const resolvedDir = dir ?? this.basePath;
     return glob(
       globPattern,
       {
-        cwd: path.join(process.cwd(), dir),
+        cwd: path.join(process.cwd(), resolvedDir),
         nodir: true,
         ignore: this.ignorePatterns,
       }
-    ).then((e) => e.map((image) => path.join(dir, image)));
+    ).then((e) => e.map((image) => path.join(resolvedDir, image)));
   }
 
   override async delete(id: string): Promise<void> {

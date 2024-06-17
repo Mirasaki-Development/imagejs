@@ -11,8 +11,10 @@ import pkg from '../package.json';
 import { Readable } from 'stream';
 
 export default class HTTPAdapter extends Adapter {
+  public acceptStatuses: number[] = [200];
   public prefixURL: string = this.basePath;
   private readonly fetchOptions: axios.AxiosRequestConfig = {
+    maxRedirects: 5,
     headers: {
       'User-Agent': `${pkg.name}/${pkg.version}`,
       'Accept': 'image/*',
@@ -29,7 +31,9 @@ export default class HTTPAdapter extends Adapter {
 
   constructor(
     prefixURL: string,
-    options?: Partial<AdapterOptions>,
+    options?: Partial<AdapterOptions> & {
+      acceptStatuses?: number[],
+    },
     axiosOptions?: axios.CreateAxiosDefaults,
   ) {
     super(prefixURL, options);
@@ -37,13 +41,14 @@ export default class HTTPAdapter extends Adapter {
       ...axiosOptions,
       baseURL: prefixURL,
     });
+    if (options?.acceptStatuses) {
+      this.acceptStatuses = options.acceptStatuses;
+    }
   }
 
   override async has(id: string): Promise<boolean> {
-    const fullURL = new URL(id, this.prefixURL).toString();
-
     try {
-      await this._client.head(fullURL, this.fetchOptions);
+      await this._client.head(id, this.fetchOptions);
       return true;
     } catch (error) {
       return false;
@@ -51,52 +56,44 @@ export default class HTTPAdapter extends Adapter {
   }
 
   override async fetch(id: string): Promise<AdapterResult | undefined> {
-    const fullURL = new URL(id, this.prefixURL).toString();
+    const fileExtension = id.split('.').pop() as ImageFormat;
+    if (!imageFormats.includes(fileExtension)) {
+      return undefined;
+    }
 
     let response: Response;
     try {
-      response = await this._client.get(fullURL, this.fetchOptions);
+      response = await this._client.get(id, {
+        ...this.fetchOptions,
+        responseType: 'arraybuffer',
+      });
     } catch (error) {
-      throw new Error(`Could not fetch image at URL "${fullURL}": ${error}`);
+      throw new Error(`Could not fetch image at URL "${id}": ${error}`);
     }
 
-    if (response.status === 404) {
-      return undefined;
-    }
-
-    if (!response.ok) {
-      return undefined;
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.startsWith('image/')) {
-      return undefined;
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const fileExtension = contentType.split('/')[1] as ImageFormat;
-    if (!imageFormats.includes(fileExtension)) {
+    if (!this.acceptStatuses.includes(response.status)) {
       return undefined;
     }
 
     return {
+      // @ts-expect-error responseType is arraybuffer
+      data: Buffer.from(response.data),
       format: fileExtension,
-      data: buffer,
     };
   }
 
-  override async stream(_id: string): Promise<undefined | AdapterResult<Readable>> {
-    const fileExtension = _id.split('.').pop() as ImageFormat;
+  override async stream(id: string): Promise<undefined | AdapterResult<Readable>> {
+    const fileExtension = id.split('.').pop() as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
       return undefined;
     }
 
-    const response = await this._client.get(_id, {
+    const response = await this._client.get(id, {
       responseType: 'stream',
       ...this.fetchOptions,
     });
 
-    if (response.status === 404) {
+    if (!this.acceptStatuses.includes(response.status)) {
       return undefined;
     }
 

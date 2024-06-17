@@ -19,6 +19,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prebuild": "turbo clean",
     "release": "turbo build && changeset version && changeset publish",
+    "test": "turbo test",
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {

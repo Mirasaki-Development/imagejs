@@ -119,6 +119,8 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
   clear() {
     this.log(`Clearing cache`);
     this._cache.clear();
+    this.expiryMap.forEach(({ timeout }) => clearTimeout(timeout));
+    this.expiryMap.clear();
   }
 
   /**
@@ -198,8 +200,8 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
   } {
     return this.ttl !== null;
   }
-  private hasMaxEntries() {
-    return this.maxEntries !== null && this._cache.size >= this.maxEntries;
+  private hasMaxEntries(offset: number = 0) {
+    return this.maxEntries !== null && this._cache.size + offset >= this.maxEntries;
   }
   protected handleConstraints(id: K, ttl: number | null = this.ttl) {
     if (typeof ttl === 'number' || this.hasTTL()) {
@@ -209,10 +211,10 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
         ts: Date.now(),
         timeout: setTimeout(() => {
           this.delete(id);
-        }, typeof ttl === 'number' ? ttl : this.ttl as number),
+        }, typeof ttl === 'number' ? ttl : this.ttl as number).unref(),
       });
     }
-    if (this.hasMaxEntries()) {
+    if (this.hasMaxEntries(-1)) {
       const first = this._cache.keys().next().value;
       this.delete(first);
     }
@@ -301,7 +303,7 @@ export class PersistentHashCache extends HashCache {
     this.log(`++ Saving cache in ${this._cacheSaveEvery}ms`);
     this._throttleSaveCacheTimeout = setTimeout(() => {
       this.throttleSaveRun(to);
-    }, this._cacheSaveEvery);
+    }, this._cacheSaveEvery).unref();
   };
   private throttleSaveRun = (to: string = this._cachePath) => {
     const currCacheHash = this.computeAnyHash(Object.fromEntries(this._cache.entries()));
