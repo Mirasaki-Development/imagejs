@@ -16,9 +16,8 @@
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prebuild": "turbo clean",
-    "release": "turbo build && changeset publish",
-    "typecheck": "turbo typecheck",
-    "version-packages": "changeset version"
+    "release": "turbo build && changeset version && changeset publish",
+    "typecheck": "turbo typecheck"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.5",

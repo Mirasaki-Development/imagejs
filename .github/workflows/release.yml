@@ -30,6 +30,7 @@ jobs:
         with:
           node-version: 18.x
           cache: 'pnpm'
+          registry-url: https://registry.npmjs.org/
 
       - name: Get pnpm store directory
         shell: bash
@@ -60,10 +61,19 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm release
+          title: 'chore: version packages'
+          commit: "chore: version packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+    
+      - name: Setup node with GitHub Packages registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: 'pnpm'
+          registry-url: https://npm.pkg.github.com
+
       - name: Use GitHub packages registry in .npmrc
         run: |
           cat << EOF > "$HOME/.npmrc"
@@ -75,8 +85,11 @@ jobs:
 
       - name: Publish to GitHub Packages
         # if: steps.changesets.outputs.published == 'true'
-        run: pnpm changeset publish --registry=https://npm.pkg.github.com
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send a Discord notification if a publish happens

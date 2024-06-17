@@ -16,7 +16,8 @@
   },
   "homepage": "https://imagejs.mirasaki.dev",
   "repository": {
-    "url": "https://github.com/Mirasaki-Development/imagejs"
+    "url": "https://github.com/Mirasaki-Development/imagejs",
+    "directory": "packages/aws"
   },
   "scripts": {
     "start": "node dist/index.js",
