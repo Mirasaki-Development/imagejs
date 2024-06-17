@@ -1,16 +1,12 @@
 import { ImageJS } from '@imagejs/core';
 import FSAdapter from '..';
 
+const imageJS = new ImageJS(
+  new FSAdapter('src/__tests__/images', { ignorePatterns: ['optimized/**'] }),
+  new FSAdapter('src/__tests__/images/optimized'),
+);
+
 describe('FSAdapter', () => {
-  let imageJS: ImageJS;
-
-  beforeEach(() => {
-    imageJS = new ImageJS(
-      new FSAdapter('src/__tests__/images', { ignorePatterns: ['optimized/**'] }),
-      new FSAdapter('src/__tests__/images/optimized'),
-    );
-  });
-
   it('should create an ImageJS instance', () => {
     expect(imageJS).toBeInstanceOf(ImageJS);
   });

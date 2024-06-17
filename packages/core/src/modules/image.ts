@@ -271,7 +271,11 @@ export class ImageJS implements ImageJSOptions {
     const promises = images.map(async (image) => {
       const imageSizeId = this.resolveId(image, size, this.targetFormat);
       this.log(`Permanently caching image "${imageSizeId}"`);
-      const response = await this.outputAdapter.fetch(imageSizeId, false) as AdapterResult<Buffer>;
+      const response = await this.outputAdapter.fetch(imageSizeId, false);
+      if (!response) {
+        this.log(`Image "${imageSizeId}" does not exist - was it deleted?`);
+        return;
+      }
       const cacheKey = this.transformer.cacheKey({
         resourceId: imageSizeId,
         size: this.sizes[size],
