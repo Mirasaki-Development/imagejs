@@ -99,6 +99,11 @@ export class ImageTransformer {
     const resolvedBrightness = this.resolveUserInputScale(brightness);
     const resolvedSaturation = this.resolveUserInputScale(saturation);
     const resolvedHue = this.resolveUserInputScale(hue);
+    console.dir({
+      resolvedBrightness,
+      resolvedSaturation,
+      resolvedHue,
+    })
     if (resolvedBrightness !== 0 || resolvedSaturation !== 0 || resolvedHue !== 0) {
       transformer.modulate({
         brightness: resolvedBrightness,
@@ -108,9 +113,14 @@ export class ImageTransformer {
     }
 
     const resolvedContrast = this.resolveUserInputScale(contrast);
+    console.dir({
+      resolvedContrast,
+    })
     if (resolvedContrast !== 0) {
       transformer.linear(1 + resolvedContrast / 100, 1 + resolvedContrast / 100);
     }
+
+
 
     const resolvedSepia = Math.min(Math.max(sepia, 0), 100);
     if (resolvedSepia !== 0) {
@@ -144,7 +154,8 @@ export class ImageTransformer {
       buffer = await transformer.toBuffer()
     } catch (error) {
       this.log(`Failed to transform image: ${error}`);
-      buffer = image;
+      // Return empty image
+      buffer = Buffer.alloc(0);
     }
 
     this.hashCache.set(cacheKey, buffer);
