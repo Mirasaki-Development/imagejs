@@ -76,6 +76,7 @@ jobs:
 
       - name: Use GitHub packages registry in .npmrc
         run: |
+          sed -i '$ d' "$HOME/.npmrc"
           cat << EOF > "$HOME/.npmrc"
             @mirasaki-development:registry=https://npm.pkg.github.com
             //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
