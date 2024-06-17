@@ -10,7 +10,8 @@
   ],
   "homepage": "https://imagejs.mirasaki.dev",
   "repository": {
-    "url": "https://github.com/Mirasaki-Development/imagejs"
+    "url": "https://github.com/Mirasaki-Development/imagejs",
+    "directory": "packages/eslint-config"
   },
   "devDependencies": {
     "@vercel/style-guide": "^5.2.0",
