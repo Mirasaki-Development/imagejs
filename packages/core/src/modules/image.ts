@@ -113,16 +113,16 @@ export class ImageJS implements ImageJSOptions {
    * the optimized images will still be saved in the destination
    * directory, but any files that are not present in the source
    * will not be removed.
-   *
-   * Note: Caching is not implemented yet, so the adapter
-   * will always optimize the images, even if they haven't changed
-   * and are already optimized. This is prone to change in the future.
-   */ // [DEV]
-  async sync(force = false): Promise<void> {
+   */
+  async sync(force = false): Promise<{
+    saved: string[],
+    deleted: string[],
+    updated: string[],
+  }> {
     this.log('Syncing source and destination directories');
     if (!this.inputAdapter.supportsList) {
       this.inputAdapter.log('This adapter does not support listing images');
-      return;
+      return { saved: [], deleted: [], updated: [] };
     }
 
     const start = process.hrtime.bigint();
@@ -192,13 +192,21 @@ export class ImageJS implements ImageJSOptions {
       ...resolveImageDeleteSizes,
     ]);
 
+    const response = {
+      saved: saveMappedToOriginal,
+      deleted: resolveImageDeleteSizes,
+      updated: changes ?? [],
+    };
+
     this.log(`
       [SYNC] Synced %d images, deleted %d images, updated %d changed images, completed in %dms`,
-      saveMappedToOriginal.length,
-      resolveImageDeleteSizes.length,
-      changes ? changes.length : 0,
+      response.saved.length,
+      response.deleted.length,
+      response.updated.length,
       Number(process.hrtime.bigint() - start) / 1e6
     );
+
+    return response;
   }
 
   /**

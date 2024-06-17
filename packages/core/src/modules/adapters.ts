@@ -31,7 +31,7 @@ export type AdapterFunctions = {
   fetch: (_id: string, _prefixBase?: boolean) => Promise<AdapterResult | undefined>;
   stream: (_id: string, _prefixBase?: boolean) => undefined | AdapterResult<Readable> | Promise<undefined | AdapterResult<Readable>>;
   save: (_id: string, _data: Buffer) => void | Promise<void>;
-  listImages: (_dir: string) => string[] | Promise<string[]>;
+  listImages: (_dir?: string) => string[] | Promise<string[]>;
   delete: (_id: string) => void | Promise<void>;
   clean: () => void | Promise<void>;
 };
@@ -74,7 +74,7 @@ export class Adapter implements AdapterFunctions, AdapterOptions {
     throw new Error('Method not implemented.');
   }
 
-  listImages(_dir: string): Promise<string[]> {
+  listImages(_dir?: string): Promise<string[]> {
     throw new Error('Method not implemented.');
   }
 
@@ -82,7 +82,7 @@ export class Adapter implements AdapterFunctions, AdapterOptions {
     throw new Error('Method not implemented.');
   }
 
-  clean() {
+  clean(): Promise<void> {
     throw new Error('Method not implemented.');
   }
 }
@@ -133,7 +133,7 @@ export class PrivateAdapter implements Adapter {
     return this._adapter.save(id, data);
   }
 
-  async listImages(dir: string): Promise<string[]> {
+  async listImages(dir?: string): Promise<string[]> {
     return this._adapter.listImages(dir);
   }
 
@@ -141,7 +141,7 @@ export class PrivateAdapter implements Adapter {
     return this._adapter.delete(id);
   }
 
-  async clean() {
+  async clean(): Promise<void> {
     return this._adapter.clean();
   }
 }

@@ -36,6 +36,23 @@
         "^lint:fix"
       ]
     },
+    "test": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "__mocks__/**",
+        "__tests__/**",
+        "src/**",
+        "jest.config.js",
+        "package.json",
+        "tsconfig.json"
+      ],
+      "outputs": [
+        "coverage/**"
+      ],
+      "outputLogs": "new-only"
+    },
     "typecheck": {
       "dependsOn": [
         "^typecheck"

@@ -40,18 +40,6 @@ export type ImageJSOptions = {
    */
   targetFormat?: ImageFormat;
   /**
-   * The input directory for the images
-   * 
-   * @default 'public/images'
-   */
-  inputDir?: string;
-  /**
-   * The output directory for the optimized images
-   * 
-   * @default 'optimized'
-   */
-  outputDir?: string;
-  /**
    * Configuration options for the hash cache
    */
   hashOptions?: Partial<HashOptions>;

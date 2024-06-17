@@ -12,6 +12,7 @@ module.exports = {
   globals: {
     React: true,
     JSX: true,
+    jest: true,
   },
   env: {
     node: true,

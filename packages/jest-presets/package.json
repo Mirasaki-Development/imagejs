@@ -1,0 +1,28 @@
+{
+  "name": "@imagejs/jest-presets",
+  "description": "Just presets for ImageJS packages",
+  "version": "0.1.2",
+  "private": false,
+  "files": [
+    "jest"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://imagejs.mirasaki.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com:Mirasaki-Development/imagejs.git",
+    "directory": "packages/jest-presets"
+  },
+  "dependencies": {
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.2",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
