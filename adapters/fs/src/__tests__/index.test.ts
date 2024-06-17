@@ -55,11 +55,6 @@ describe('FSAdapter', () => {
     expect(image).toBeDefined();
   });
 
-  it('should properly fetch an output image', async () => {
-    const image = await imageJS.outputAdapter.fetch(imageJS.resolveId('banner.webp', 'blur'), false);
-    expect(image).toBeDefined();
-  });
-
   it('should properly stream an image', async () => {
     if (imageJS.inputAdapter.supportsStream) {
       const stream = await imageJS.inputAdapter.stream('banner.webp');
@@ -86,5 +81,10 @@ describe('FSAdapter', () => {
       const ignoredFiles = await imageJS.inputAdapter.listImages('src/__tests__/images/optimized/blur/optimized');
       expect(ignoredFiles).toHaveLength(0);
     }
+  });
+
+  it('should properly fetch an output image', async () => {
+    const image = await imageJS.outputAdapter.fetch(imageJS.resolveId('banner.webp', 'blur'), false);
+    expect(image).toBeDefined();
   });
 });
