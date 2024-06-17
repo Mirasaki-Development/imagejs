@@ -5,13 +5,13 @@ import {
   AdapterOptions,
   ImageFormat,
   imageFormats,
-} from '@imagejs/core'
+} from '@imagejs/core';
 
 import pkg from '../package.json';
 import { Readable } from 'stream';
 
 export default class HTTPAdapter extends Adapter {
-  public prefixURL: string = this.basePath
+  public prefixURL: string = this.basePath;
   private readonly fetchOptions: axios.AxiosRequestConfig = {
     headers: {
       'User-Agent': `${pkg.name}/${pkg.version}`,
@@ -103,6 +103,6 @@ export default class HTTPAdapter extends Adapter {
     return {
       data: response.data,
       format: fileExtension,
-    }
+    };
   }
 }

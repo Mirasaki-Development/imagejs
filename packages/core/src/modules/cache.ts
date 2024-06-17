@@ -1,5 +1,5 @@
 import debug from 'debug';
-import { Hash, createHash } from 'crypto'
+import { Hash, createHash } from 'crypto';
 import fs from 'fs';
 import { Readable } from 'stream';
 
@@ -26,7 +26,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
     length: 14,
     ttl: 1000 * 60 * 60, // 1 hour
     maxEntries: null,
-  }
+  };
   readonly log = debug('imagejs:cache');
   protected _cache: Map<K, V> = new Map<K, V>();
 
@@ -50,7 +50,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
     return createHash(options.algorithm ?? this.algorithm)
       .update(buffer)
       .digest(options.encoding ?? this.encoding)
-      .slice(0, options.length ?? this.length)
+      .slice(0, options.length ?? this.length);
   }
 
   async computeStreamHash(
@@ -76,7 +76,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
     return this.computeBufferHash(
       Buffer.from(JSON.stringify(value)),
       options
-    )
+    );
   }
 
   /**
@@ -98,7 +98,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
   set(id: K, value: V, ttl: number | null = this.ttl) {
     this.log(`Setting value for identifier "${id}"`);
     this._cache.set(id, value);
-    this.handleConstraints(id, ttl)
+    this.handleConstraints(id, ttl);
     return this;
   }
 
@@ -143,7 +143,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
    * Iterate over the entries in the cache.
    * @param callback - The callback to invoke for each entry.
    */
-  forEach(callback: (value: V, key: K, map: Map<K, V>) => void) {
+  forEach(callback: (_value: V, _key: K, _map: Map<K, V>) => void) {
     this._cache.forEach(callback);
   }
 
@@ -209,7 +209,7 @@ export class HashCache<K = string, V = string> implements HashOptions, Map<K, V>
         ts: Date.now(),
         timeout: setTimeout(() => {
           this.delete(id);
-        }, typeof ttl === 'number' ? ttl : this.ttl as number)
+        }, typeof ttl === 'number' ? ttl : this.ttl as number),
       });
     }
     if (this.hasMaxEntries()) {
@@ -228,7 +228,7 @@ export class PersistentHashCache extends HashCache {
     super(options);
     this.loadCache(this._cachePath).then(() => {
       this.throttleSaveCache(this._cachePath);
-    })
+    });
   }
 
   override set(id: string, value: string, ttl: number | null = this.ttl) {
@@ -261,7 +261,7 @@ export class PersistentHashCache extends HashCache {
   private loadCache = async (from: string = this._cachePath) => {
     this.log(`Loading cache from file at path "${from}"`);
     await this.ensureCacheFileExists();
-    const data = await fs.promises.readFile(from)
+    const data = await fs.promises.readFile(from);
     const cache = JSON.parse(data.toString());
     this._cacheHash = this.computeAnyHash(cache);
     for (const [key, value] of Object.entries(cache)) {
@@ -273,13 +273,13 @@ export class PersistentHashCache extends HashCache {
       this._cache.set(key, value);
     }
     this.log(`Loaded cache from file at path "${from}"`);
-  }
+  };
 
   private saveCache = async (to: string = this._cachePath) => {
     this.log(`Saving cache to file at path "${to}"`);
     await this.ensureCacheFileExists();
     return fs.promises.writeFile(to, JSON.stringify(Object.fromEntries(this._cache.entries())));
-  }
+  };
 
   private _cacheFileExists = false;
   private ensureCacheFileExists = async () => {
@@ -290,7 +290,7 @@ export class PersistentHashCache extends HashCache {
       await fs.promises.writeFile(this._cachePath, JSON.stringify({}));
     }
     this._cacheFileExists = true;
-  }
+  };
 
   private _throttleSaveCacheTimeout: NodeJS.Timeout | null = null;
   private throttleSaveCache = (to: string = this._cachePath) => {
@@ -302,7 +302,7 @@ export class PersistentHashCache extends HashCache {
     this._throttleSaveCacheTimeout = setTimeout(() => {
       this.throttleSaveRun(to);
     }, this._cacheSaveEvery);
-  }
+  };
   private throttleSaveRun = (to: string = this._cachePath) => {
     const currCacheHash = this.computeAnyHash(Object.fromEntries(this._cache.entries()));
     if (currCacheHash === this._cacheHash) {
@@ -314,5 +314,5 @@ export class PersistentHashCache extends HashCache {
     this.log(`=!= Cache has changed, saving`);
     this.saveCache(to);
     this._throttleSaveCacheTimeout = null;
-  }
+  };
 }

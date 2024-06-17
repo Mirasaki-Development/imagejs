@@ -27,17 +27,17 @@ export type AdapterOptions = {
 };
 
 export type AdapterFunctions = {
-  has: (id: string, prefixBase?: boolean) => boolean | Promise<boolean>;
-  fetch: (id: string, prefixBase?: boolean) => Promise<AdapterResult | undefined>;
-  stream: (id: string, prefixBase?: boolean) => undefined | AdapterResult<Readable> | Promise<undefined | AdapterResult<Readable>>;
-  save: (id: string, data: Buffer) => void | Promise<void>;
-  listImages: (dir: string) => string[] | Promise<string[]>;
-  delete: (id: string) => void | Promise<void>;
+  has: (_id: string, _prefixBase?: boolean) => boolean | Promise<boolean>;
+  fetch: (_id: string, _prefixBase?: boolean) => Promise<AdapterResult | undefined>;
+  stream: (_id: string, _prefixBase?: boolean) => undefined | AdapterResult<Readable> | Promise<undefined | AdapterResult<Readable>>;
+  save: (_id: string, _data: Buffer) => void | Promise<void>;
+  listImages: (_dir: string) => string[] | Promise<string[]>;
+  delete: (_id: string) => void | Promise<void>;
   clean: () => void | Promise<void>;
 };
 
 export type AdapterConstructor = {
-  new (basePath: string, options?: Partial<AdapterOptions>): Adapter;
+  new (_basePath: string, _options?: Partial<AdapterOptions>): Adapter;
 };
 
 export class Adapter implements AdapterFunctions, AdapterOptions {

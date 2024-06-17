@@ -10,7 +10,7 @@ export const defaultSizes: ImageSizes = {
   small: { size: 320, quality: 70 },
   medium: { size: 640, quality: 80 },
   large: { size: 1280, quality: 90 },
-  original: { size: null, },
+  original: { size: null },
 };
 
 export const sizeKeys: SizeKey[] = ['blur', 'small', 'medium', 'large', 'original'];
@@ -22,35 +22,35 @@ export const resolveSize = (
     return { width: size.size, height: size.size };
   }
   return size;
-}
+};
 
-export const imageExtensionRegex = /\.(jpe?g|png|webp|avif|tiff|gif|heif|raw)$/i
+export const imageExtensionRegex = /\.(jpe?g|png|webp|avif|tiff|gif|heif|raw)$/i;
 
 export const removeImageFormat = (image: string) => {
   return image.replace(imageExtensionRegex, '');
-}
+};
 
 export const resolveSharpTransformer = (image: Buffer, format: ImageFormat) => {
   const instance = sharp(image);
   switch (format) {
     case 'avif':
-      return instance.avif.bind(instance)
+      return instance.avif.bind(instance);
     case 'png':
-      return instance.png.bind(instance)
+      return instance.png.bind(instance);
     case 'jpeg':
     case 'jpg':
-      return instance.jpeg.bind(instance)
+      return instance.jpeg.bind(instance);
     case 'webp':
-      return instance.webp.bind(instance)
+      return instance.webp.bind(instance);
     case 'tiff':
-      return instance.tiff.bind(instance)
+      return instance.tiff.bind(instance);
     case 'gif':
-      return instance.gif.bind(instance)
+      return instance.gif.bind(instance);
     case 'heif':
-      return instance.heif.bind(instance)
+      return instance.heif.bind(instance);
     case 'raw':
-      return instance.raw.bind(instance)
+      return instance.raw.bind(instance);
     default:
       throw new Error(`Unsupported image format: ${format}`);
   }
-}
+};

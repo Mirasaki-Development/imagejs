@@ -1,4 +1,4 @@
-import { ImageFormat, SizeByDimensions, SizeKey, SizeOptions } from './options'
+import { ImageFormat, SizeByDimensions, SizeKey, SizeOptions } from './options';
 
 export type Query = {
   [key: string]: undefined | string | string[] | Query | Query[];

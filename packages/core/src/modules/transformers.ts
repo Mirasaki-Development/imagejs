@@ -18,14 +18,14 @@ export class ImageTransformer {
   hashCache: HashCache<string, Buffer>;
   
   constructor(cache: HashCache<string, Buffer>) {
-    this.hashCache = cache
+    this.hashCache = cache;
   }
 
   protected readonly log = debug('imagejs:transformer');
 
   cacheKey(input: TransformImageInput) {
-    const { format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim, } = input;
-    return `transform:${input.resourceId}-${this.hashCache.computeAnyHash({ format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim, })}`;
+    const { format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim } = input;
+    return `transform:${input.resourceId}-${this.hashCache.computeAnyHash({ format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim })}`;
   }
 
   /**
@@ -39,7 +39,7 @@ export class ImageTransformer {
    */
   resolveUserInputScale = (value: number) => {
     return Math.min(Math.max(value / 100 + 1, 0), 2);
-  }
+  };
 
   async transformImage(input: TransformImageInputWithBuffer) {
     this.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
@@ -78,7 +78,7 @@ export class ImageTransformer {
         transformer.resize(width, height, {
           fit: 'cover',
           position: crop_gravity,
-        })
+        });
       }
     } else {
       this.log(`Resizing image to size (fit:inside) with width ${resolvedSize.width} and height ${resolvedSize.height}`);
@@ -103,7 +103,7 @@ export class ImageTransformer {
       resolvedBrightness,
       resolvedSaturation,
       resolvedHue,
-    })
+    });
     if (resolvedBrightness !== 0 || resolvedSaturation !== 0 || resolvedHue !== 0) {
       transformer.modulate({
         brightness: resolvedBrightness,
@@ -115,7 +115,7 @@ export class ImageTransformer {
     const resolvedContrast = this.resolveUserInputScale(contrast);
     console.dir({
       resolvedContrast,
-    })
+    });
     if (resolvedContrast !== 0) {
       transformer.linear(1 + resolvedContrast / 100, 1 + resolvedContrast / 100);
     }
@@ -151,7 +151,7 @@ export class ImageTransformer {
 
     let buffer: Buffer;
     try {
-      buffer = await transformer.toBuffer()
+      buffer = await transformer.toBuffer();
     } catch (error) {
       this.log(`Failed to transform image: ${error}`);
       // Return empty image

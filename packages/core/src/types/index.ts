@@ -1,3 +1,3 @@
-export * from './options'
-export * from './query'
-export * from './wrapper'
+export * from './options';
+export * from './query';
+export * from './wrapper';

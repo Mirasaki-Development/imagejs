@@ -29,11 +29,11 @@ export const expressMiddleware = ({
   if (!useEtagCaching) {
     router.use((_req, res, next) => {
       res.set('Cache-Control', 'no-store');
-      res.removeHeader('ETag')
+      res.removeHeader('ETag');
       next();
     });
   }
 
   router.get('/:id(*)', ...middleware);
   return router;
-}
+};
