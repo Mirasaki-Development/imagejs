@@ -29,7 +29,7 @@ export class ImageJS implements ImageJSOptions {
       medium: options?.sizes?.medium ?? defaultSizes.medium,
       large: options?.sizes?.large ?? defaultSizes.large,
       original: options?.sizes?.original ?? defaultSizes.original,
-    }
+    };
     if (options?.targetFormat) {
       this.targetFormat = options.targetFormat;
     }
@@ -45,7 +45,7 @@ export class ImageJS implements ImageJSOptions {
       encoding: options?.imageCacheOptions?.encoding ?? HashCache.defaults.encoding,
       length: options?.imageCacheOptions?.length ?? HashCache.defaults.length,
       ttl: options?.imageCacheOptions?.ttl ?? HashCache.defaults.ttl,
-      maxEntries: options?.imageCacheOptions?.maxEntries ?? HashCache.defaults.maxEntries
+      maxEntries: options?.imageCacheOptions?.maxEntries ?? HashCache.defaults.maxEntries,
     }));
     for (const [k,v] of Object.entries(options?.permCacheSizes ?? {})) {
       if (v) this.permanentlyCacheImageSize(k as SizeKey);
@@ -102,7 +102,7 @@ export class ImageJS implements ImageJSOptions {
       image,
       size,
       format,
-    })
+    });
   }
 
   /**
@@ -139,7 +139,7 @@ export class ImageJS implements ImageJSOptions {
       .map((e) => `${removeImageFormat(e)}.${this.targetFormat}`);
 
     this.outputAdapter.log('[SYNC] Loading destination images');
-    const destinationImages = await this.outputAdapter.listImages(`${this.outputAdapter.basePath}/blur`)
+    const destinationImages = await this.outputAdapter.listImages(`${this.outputAdapter.basePath}/blur`);
     const destinationImagesSources = destinationImages // Map optimized images back to original (source) url
       .map((image) => image.replace(`${this.outputAdapter.basePath}/blur`, this.inputAdapter.basePath));
 
@@ -149,7 +149,7 @@ export class ImageJS implements ImageJSOptions {
     const saveMappedToOriginal = imagesToSave.map((image) => {
       const index = sourceImagesExpectedOutput.indexOf(image);
       return sourceImages[index] as string;
-    })
+    });
     const resolveImageDeleteSizes = imagesToDelete.map((image) => {
       const index = destinationImagesSources.indexOf(image);
       const original = destinationImages[index] as string;
@@ -157,13 +157,13 @@ export class ImageJS implements ImageJSOptions {
         return original.replace(
           `${this.outputAdapter.basePath}/blur`,
           sizeKey
-        )
+        );
       });
-    }).flat()
+    }).flat();
 
-    if (imagesToSave.length) this,this.outputAdapter.log('[SYNC] Saving images: %O', saveMappedToOriginal)
+    if (imagesToSave.length) this,this.outputAdapter.log('[SYNC] Saving images: %O', saveMappedToOriginal);
     if (imagesToDelete.length) {
-      this.outputAdapter.log('[SYNC] Deleting images: %O', resolveImageDeleteSizes)
+      this.outputAdapter.log('[SYNC] Deleting images: %O', resolveImageDeleteSizes);
       imagesToDelete.forEach((image) => this.hashCache.delete(image));
     }
 
@@ -181,7 +181,7 @@ export class ImageJS implements ImageJSOptions {
           ? resolveImageDeleteSizes.map((image) => this.outputAdapter.delete(image))
           : []
       ),
-    ])
+    ]);
 
     // Only check for changes if not hard-syncing
     // Has to be after the images are saved and deleted
@@ -189,7 +189,7 @@ export class ImageJS implements ImageJSOptions {
     let changes: null | string[] = null;
     if (!force) changes = await this.checkForChanges([
       ...saveMappedToOriginal,
-      ...resolveImageDeleteSizes
+      ...resolveImageDeleteSizes,
     ]);
 
     this.log(`
@@ -236,17 +236,17 @@ export class ImageJS implements ImageJSOptions {
         this.hashCache.set(e, hashKey);
         return e;
       })
-    )
+    );
 
     const toOptimize = response.filter((e) => e !== null) as string[];
     const optimizedImages = await this.generateOptimizedSizes({
       save: true,
       inputDir: toOptimize,
-      outputDir: this.outputAdapter.basePath
+      outputDir: this.outputAdapter.basePath,
     });
     const mappedImages = this.mapOptimizedImages(optimizedImages);
     this.hashCache.log('Updated/changed images: %O', mappedImages);
-    return Object.keys(mappedImages)
+    return Object.keys(mappedImages);
   }
 
   async permanentlyCacheImageSize(size: SizeKey) {
@@ -268,7 +268,7 @@ export class ImageJS implements ImageJSOptions {
         resourceId: imageSizeId,
         size: this.sizes[size],
         format: this.targetFormat,
-        ...defaultTransformQueryParams
+        ...defaultTransformQueryParams,
       });
       this.transformer.hashCache.set(cacheKey, response.data, null);
     });
@@ -307,7 +307,7 @@ export class ImageJS implements ImageJSOptions {
     /**
      * The callback to run for each image that will be optimized
      */
-    callback?: (id: string, buffer: Buffer) => void;
+    callback?: (_id: string, _buffer: Buffer) => void;
   } = {}): Promise<OptimizedImageData> {
     this.log(`Generating optimized images from ${inputDir} to ${outputDir}`);
     if (typeof inputDir === 'string' && !this.inputAdapter.supportsList) {
@@ -329,7 +329,7 @@ export class ImageJS implements ImageJSOptions {
           this.outputAdapter.log(`Saving optimized image to ${outputPath}`);
           await this.outputAdapter.save(outputPath, data);
         }
-        return { size, path: outputPath, data }
+        return { size, path: outputPath, data };
       });
       return [ image, await Promise.all(innerPromises) ] as const;
     });

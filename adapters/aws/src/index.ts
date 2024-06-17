@@ -8,7 +8,7 @@ import {
   ListObjectsV2Command,
   DeleteObjectCommand,
   HeadObjectCommand,
-} from '@aws-sdk/client-s3'
+} from '@aws-sdk/client-s3';
 
 import {
   Adapter,
@@ -16,7 +16,7 @@ import {
   AdapterOptions,
   ImageFormat,
   imageFormats,
-} from '@imagejs/core'
+} from '@imagejs/core';
 
 export default class AWSAdapter extends Adapter {
   private readonly client: S3Client;
@@ -59,29 +59,32 @@ export default class AWSAdapter extends Adapter {
       undefined;
     }
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       try {
-        const response = await this.client.send(new GetObjectCommand({
+        this.client.send(new GetObjectCommand({
           Bucket: this.bucket,
           Key: id,
-        }));
+        })).then((response) => {
+          if (!response.Body) {
+            resolve(undefined);
+            return;
+          }
 
-        if (!response.Body) {
-          resolve(undefined);
-          return;
-        }
-
-        resolve({
-          data: Buffer.from(await response.Body.transformToByteArray()),
-          format: fileExtension,
+          response.Body.transformToByteArray().then((data) => {
+            resolve({
+              data: Buffer.from(data),
+              format: fileExtension,
+            });
+          });
         });
+
       } catch (err) {
         if (typeof err === 'object' && err !== null && 'Code' in err && err.Code === 'NoSuchKey') {
-          return resolve(undefined)
+          return resolve(undefined);
         }
-        return reject(err)
+        return reject(err);
       } 
-    })
+    });
   }
 
   override async save(id: string, data: Buffer): Promise<void> {

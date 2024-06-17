@@ -22,7 +22,7 @@ export const serveOptimizedMiddleware: ImageJSMiddleware<[
   const acceptHeader = req.headers.accept;
   const resolveToFormat = useWebpIfAvailable && acceptHeader && (acceptHeader.includes('image/webp') || acceptHeader === '*/*' || acceptHeader === 'image/*' || acceptHeader === '*')
     ? 'webp'
-    : 'original'
+    : 'original';
 
   // Resolve the query parameters and id
   const queryParams = resolveQueryParams(id, req.query, resolveToFormat);
@@ -69,7 +69,7 @@ export const serveOptimizedMiddleware: ImageJSMiddleware<[
       image: optimizedOriginal.data,
       resourceId: resolvedId,
       size: typeof queryParams.size === 'string' ? imageJS.sizes[queryParams.size] : queryParams.size,
-    })
+    });
 
     // Send the transformed image
     imageJS.inputAdapter.log(`[express] Sending transformed image: ${resolvedId}`);
@@ -81,7 +81,7 @@ export const serveOptimizedMiddleware: ImageJSMiddleware<[
   // Stream the optimized image if supported
   if (imageJS.outputAdapter.supportsStream) {
     imageJS.inputAdapter.log(`[express] Streaming optimized image: ${resolvedId}`);
-    const response = await imageJS.outputAdapter.stream(resolvedId, false)
+    const response = await imageJS.outputAdapter.stream(resolvedId, false);
     if (!response) {
       throw new Error(`Optimized image not found: ${resolvedId}, please create a GitHub issue`);
     }
@@ -98,4 +98,4 @@ export const serveOptimizedMiddleware: ImageJSMiddleware<[
   }
   res.type(`image/${queryParams.format}`);
   res.send(optimized.data);
-}
+};

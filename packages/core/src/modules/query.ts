@@ -1,34 +1,34 @@
 import { imageFormats, sizeKeys } from '../helpers';
-import { Gravity, ImageFormat, Query, QueryParams, SizeKey, TransformQueryParams } from '../types'
+import { Gravity, ImageFormat, Query, QueryParam, QueryParams, SizeKey, TransformQueryParam, TransformQueryParams } from '../types';
 import { ImageJS } from './image';
 
 export const allGravities: Gravity[] = [
   'north', 'northeast', 'east', 'southeast',
   'south', 'southwest', 'west', 'northwest',
   'center', 'entropy', 'attention',
-]
+];
 
 export const defaultQueryParams: QueryParams = {
-  format: 'webp',
-  size: 'original',
-}
+  [QueryParam.format]: 'webp',
+  [QueryParam.size]: 'original',
+};
 
 export const defaultTransformQueryParams: TransformQueryParams = {
-  aspect_ratio: 'auto',
-  sharpen: false,
-  blur: 0,
-  crop: null,
-  crop_gravity: 'center',
-  flip: false,
-  flop: false,
-  brightness: 0,
-  saturation: 0,
-  hue: 0,
-  contrast: 0,
-  sepia: 0,
-  grayscale: false,
-  trim: false,
-}
+  [TransformQueryParam.aspect_ratio]: 'auto',
+  [TransformQueryParam.sharpen]: false,
+  [TransformQueryParam.blur]: 0,
+  [TransformQueryParam.crop]: null,
+  [TransformQueryParam.crop_gravity]: 'center',
+  [TransformQueryParam.flip]: false,
+  [TransformQueryParam.flop]: false,
+  [TransformQueryParam.brightness]: 0,
+  [TransformQueryParam.saturation]: 0,
+  [TransformQueryParam.hue]: 0,
+  [TransformQueryParam.contrast]: 0,
+  [TransformQueryParam.sepia]: 0,
+  [TransformQueryParam.grayscale]: false,
+  [TransformQueryParam.trim]: false,
+};
 
 export const transformQueryParamsKeys = Object.keys(defaultTransformQueryParams) as (keyof TransformQueryParams)[];
 
@@ -100,7 +100,7 @@ export const resolveQueryParams = (
     : defaultTransformQueryParams.blur;
   const resolvedCrop = (typeof crop === 'string' && /^(\d+),(\d+)(?:,(\d+),(\d+))?$/.test(crop)
     ? crop.split(',').map((n) => parseInt(n, 10)) as [number, number, number, number]
-    : defaultTransformQueryParams.crop)
+    : defaultTransformQueryParams.crop);
   const resolvedCropGravity = allGravities.includes(crop_gravity as Gravity)
     ? crop_gravity as Gravity
     : defaultTransformQueryParams.crop_gravity;
@@ -143,7 +143,7 @@ export const resolveQueryParams = (
     grayscale: resolvedGrayscale,
     trim: resolvedTrim,
   };
-}
+};
 
 export const hasTransforms = (
   params: ReturnType<typeof resolveQueryParams>,
@@ -160,4 +160,4 @@ export const hasTransforms = (
     if (typeof value === 'string') return value !== defaultTransformQueryParams[key];
     return false;
   });
-}
+};

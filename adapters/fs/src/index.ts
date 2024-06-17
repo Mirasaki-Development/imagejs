@@ -9,7 +9,7 @@ import {
   globPattern,
   ImageFormat,
   imageFormats,
-} from '@imagejs/core'
+} from '@imagejs/core';
 import { Readable } from 'stream';
 
 export const isENOENT = (error: unknown) => error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT';
@@ -46,7 +46,7 @@ export default class FSAdapter extends Adapter {
       buffer = await fs.promises.readFile(imagePath);
     } catch (error) {
       if (isENOENT(error)) {
-        return undefined
+        return undefined;
       }
       throw new Error(`Could not read file at path "${imagePath}": ${error}`);
     }
@@ -73,7 +73,7 @@ export default class FSAdapter extends Adapter {
     return {
       data: stream,
       format: fileExtension,
-    }
+    };
   }
   
   override async save(id: string, data: Buffer): Promise<void> {
@@ -92,7 +92,7 @@ export default class FSAdapter extends Adapter {
         nodir: true,
         ignore: this.ignorePatterns,
       }
-    ).then((e) => e.map((image) => path.join(dir, image)))
+    ).then((e) => e.map((image) => path.join(dir, image)));
   }
 
   override async delete(id: string): Promise<void> {

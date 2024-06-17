@@ -4,7 +4,7 @@ const project = resolve(process.cwd(), "tsconfig.json");
 
 /** @type {import("eslint").Linter.Config} */
 module.exports = {
-  extends: ["eslint:recommended", "prettier", "eslint-config-turbo"],
+  extends: ["eslint:recommended", "prettier"],
   plugins: ["only-warn"],
   globals: {
     React: true,
@@ -32,7 +32,9 @@ module.exports = {
     },
   ],
   rules: {
-    "comma-dangle": "always",
-    "semi": "always",
+    "comma-dangle": ["error", "always-multiline"],
+    "semi": ["error", "always"],
+    "no-unused-vars": "off",
+    "no-undef": "off",
   }
 };
