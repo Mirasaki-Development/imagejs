@@ -1,16 +1,12 @@
 import { ImageJS } from '@imagejs/core';
 import FSAdapter from '..';
 
+const imageJS = new ImageJS(
+  new FSAdapter('src/__tests__/images', { ignorePatterns: ['optimized/**'] }),
+  new FSAdapter('src/__tests__/images/optimized'),
+);
+
 describe('FSAdapter', () => {
-  let imageJS: ImageJS;
-
-  beforeEach(() => {
-    imageJS = new ImageJS(
-      new FSAdapter('src/__tests__/images', { ignorePatterns: ['optimized/**'] }),
-      new FSAdapter('src/__tests__/images/optimized'),
-    );
-  });
-
   it('should create an ImageJS instance', () => {
     expect(imageJS).toBeInstanceOf(ImageJS);
   });
@@ -55,11 +51,6 @@ describe('FSAdapter', () => {
     expect(image).toBeDefined();
   });
 
-  it('should properly fetch an output image', async () => {
-    const image = await imageJS.outputAdapter.fetch(imageJS.resolveId('banner.webp', 'blur'), false);
-    expect(image).toBeDefined();
-  });
-
   it('should properly stream an image', async () => {
     if (imageJS.inputAdapter.supportsStream) {
       const stream = await imageJS.inputAdapter.stream('banner.webp');
@@ -86,5 +77,10 @@ describe('FSAdapter', () => {
       const ignoredFiles = await imageJS.inputAdapter.listImages('src/__tests__/images/optimized/blur/optimized');
       expect(ignoredFiles).toHaveLength(0);
     }
+  });
+
+  it('should properly fetch an output image', async () => {
+    const image = await imageJS.outputAdapter.fetch(imageJS.resolveId('banner.webp', 'blur'), false);
+    expect(image).toBeDefined();
   });
 });

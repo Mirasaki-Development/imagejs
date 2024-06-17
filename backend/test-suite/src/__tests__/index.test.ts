@@ -12,9 +12,9 @@ describe('imageJS', () => {
       expect(firstImage).toBeDefined();
       expect(imageKeys).toHaveLength(4);
     });
-    it('should respect the ignorePatterns', () => {
+    it('should respect the ignorePatterns', async () => {
       expect(imageJS.inputAdapter.ignorePatterns).toEqual(['optimized/**']);
-      const ignoredFiles = imageJS.inputAdapter.listImages('public/images/optimized/blur/optimized');
+      const ignoredFiles = await imageJS.inputAdapter.listImages('public/images/optimized/blur/optimized');
       expect(ignoredFiles).toHaveLength(0);
     });
   });
