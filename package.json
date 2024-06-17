@@ -1,14 +1,26 @@
 {
   "name": "imagejs",
+  "description": "ImageJS is a modern plug-and-play image optimization library that helps you serve optimized images to your users.",
   "private": true,
+  "license": "GPL-3.0+",
+  "author": "Richard Hillebrand <me@mirasaki.dev> (https://mirasaki.dev/)",
+  "homepage": "https://imagejs.mirasaki.dev",
+  "repository": {
+    "url": "https://github.com/Mirasaki-Development/imagejs"
+  },
   "scripts": {
     "build": "turbo build",
+    "changeset": "changeset",
+    "clean": "turbo clean",
     "dev": "DEBUG=imagejs,imagejs:* turbo dev",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "typecheck": "turbo typecheck"
+    "prebuild": "turbo clean",
+    "typecheck": "turbo typecheck",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.5",
     "@imagejs/eslint-config": "workspace:*",
     "@imagejs/typescript-config": "workspace:*",
     "prettier": "^3.2.5",

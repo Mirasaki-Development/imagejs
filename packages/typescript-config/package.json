@@ -1,9 +1,19 @@
 {
   "name": "@imagejs/typescript-config",
-  "version": "0.0.0",
-  "private": true,
+  "description": "TypeScript configuration for ImageJS packages",
+  "version": "0.0.1",
+  "private": false,
+  "files": [
+    "base.json",
+    "next.json",
+    "react-internal.json"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "homepage": "https://imagejs.mirasaki.dev",
+  "repository": {
+    "url": "https://github.com/Mirasaki-Development/imagejs"
   }
 }

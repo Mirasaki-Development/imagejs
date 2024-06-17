@@ -3,6 +3,7 @@
   "globalDependencies": [
     "**/.env.*local"
   ],
+  "ui": "stream",
   "tasks": {
     "build": {
       "dependsOn": [
@@ -12,9 +13,18 @@
         "dist/**"
       ]
     },
+    "clean": {
+      "dependsOn": [
+        "^clean"
+      ]
+    },
     "dev": {
+      "dependsOn": [
+        "^build"
+      ],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "outputLogs": "full"
     },
     "lint": {
       "dependsOn": [

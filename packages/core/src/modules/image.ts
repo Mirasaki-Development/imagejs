@@ -1,12 +1,11 @@
 import path from 'path';
 
 import debug from 'debug';
-import { Adapter, HashCache, PersistentHashCache, PrivateAdapter, defaultTransformQueryParams } from '.';
+import { Adapter, AdapterResult, HashCache, PersistentHashCache, PrivateAdapter, defaultTransformQueryParams } from '.';
 import { MappedImages, OptimizedImageData } from '../types/wrapper';
 import { ImageFormat, ImageJSOptions, ImageSize, ImageSizes, SizeKey } from '../types';
 import { defaultSizes, removeImageFormat } from '../helpers';
 import { ImageTransformer } from './transformers';
-import { AdapterResult } from '../../dist';
 import { Readable } from 'stream';
 
 export class ImageJS implements ImageJSOptions {

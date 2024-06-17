@@ -2,7 +2,6 @@
 
 # We ignore `apps` because it's only used in development
 apps
-apps/test-express
 
 # Dependencies
 node_modules
@@ -30,7 +29,6 @@ coverage
 out/
 build
 dist
-
 
 # Debug
 npm-debug.log*

@@ -1,18 +1,22 @@
 {
   "name": "@imagejs/express",
+  "description": "Express middleware to serve users optimized images",
   "version": "0.0.1",
+  "license": "GPL-3.0+",
+  "author": "Richard Hillebrand <me@mirasaki.dev> (https://mirasaki.dev/)",
   "private": false,
-  "publishConfig": {
-    "access": "public"
-  },
   "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
+  "module": "dist/index.mjs",
+  "types": "src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "types": "dist/index.d.ts"
+  },
+  "homepage": "https://imagejs.mirasaki.dev",
+  "repository": {
+    "url": "https://github.com/Mirasaki-Development/imagejs"
   },
   "scripts": {
     "start": "node dist/index.js",
