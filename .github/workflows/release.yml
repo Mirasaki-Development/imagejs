@@ -63,20 +63,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       
       - name: Use GitHub packages registry in .npmrc
         run: |
           cat << EOF > "$HOME/.npmrc"
             @imagejs:registry=https://npm.pkg.github.com
-            //npm.pkg.github.com/:_authToken=$GH_TOKEN
+            //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
           EOF
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
         if: steps.changesets.outputs.published == 'true'
-        run: changeset publish --registry=https://npm.pkg.github.com
+        run: pnpm changeset publish --registry=https://npm.pkg.github.com
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
