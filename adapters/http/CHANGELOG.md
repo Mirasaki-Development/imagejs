@@ -1,5 +1,13 @@
 # @imagejs/http
 
+## 0.1.1
+
+### Patch Changes
+
+- test release workflow
+- Updated dependencies
+  - @imagejs/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

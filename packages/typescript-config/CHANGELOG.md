@@ -1,5 +1,11 @@
 # @imagejs/typescript-config
 
+## 0.1.1
+
+### Patch Changes
+
+- test release workflow
+
 ## 0.1.0
 
 ### Minor Changes
