@@ -17,7 +17,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install PNpm
         uses: pnpm/action-setup@v4
@@ -28,27 +28,13 @@ jobs:
       - name: Setup Node.js 18.x
         uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-          cache: 'pnpm'
-          registry-url: https://npm.pkg.github.com
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: '18.x'
+          registry-url: 'https://npm.pkg.github.com'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Add NPM_TOKEN to .npmrc
+      - name: Configure .npmrc to use GitHub Packages
         run: |
           cat << EOF > "$HOME/.npmrc"
             @mirasaki-development:registry=https://npm.pkg.github.com
@@ -57,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Publish to GitHub Packages
+      - name: Publish to GitHub Packages
         id: changesets
         uses: changesets/action@v1
         with:
