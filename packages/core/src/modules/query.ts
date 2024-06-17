@@ -107,16 +107,16 @@ export const resolveQueryParams = (
   const resolvedFlip = flip === 'true';
   const resolvedFlop = flop === 'true';
   const resolvedBrightness = typeof brightness === 'string' && !isNaN(parseFloat(brightness))
-    ? Math.min(Math.max(parseFloat(brightness), 0), 100)
+    ? Math.min(Math.max(parseFloat(brightness), -100), 100)
     : defaultTransformQueryParams.brightness;
   const resolvedSaturation = typeof saturation === 'string' && !isNaN(parseFloat(saturation))
-    ? Math.min(Math.max(parseFloat(saturation), 0), 100)
+    ? Math.min(Math.max(parseFloat(saturation), -100), 100)
     : defaultTransformQueryParams.saturation;
   const resolvedHue = typeof hue === 'string' && !isNaN(parseFloat(hue))
-    ? Math.min(Math.max(parseFloat(hue), 0), 100)
+    ? Math.min(Math.max(parseFloat(hue), -100), 100)
     : defaultTransformQueryParams.hue;
   const resolvedContrast = typeof contrast === 'string' && !isNaN(parseFloat(contrast))
-    ? Math.min(Math.max(parseFloat(contrast), 0), 100)
+    ? Math.min(Math.max(parseFloat(contrast), -100), 100)
     : defaultTransformQueryParams.contrast;
   const resolvedSepia = typeof sepia === 'string' && !isNaN(parseFloat(sepia))
     ? Math.min(Math.max(parseFloat(sepia), 0), 100)

@@ -20,10 +20,10 @@ export enum TransformQueryParam {
   crop_gravity = 'crop_gravity', // Default: 'center'
   flip = 'flip', // Default: false
   flop = 'flop', // Default: false
-  brightness = 'brightness', // Default: 0 (0 to 100)
-  saturation = 'saturation', // Default: 0 (0 to 100)
-  hue = 'hue', // Default: 0 (0 to 100)
-  contrast = 'contrast', // Default: 0 (0 to 100)
+  brightness = 'brightness', // Default: 0 (-100 to 100)
+  saturation = 'saturation', // Default: 0 (-100 to 100)
+  hue = 'hue', // Default: 0 (-100 to 100)
+  contrast = 'contrast', // Default: 0 (-100 to 100)
   sepia = 'sepia', // Default: 0 (0 to 100)
   grayscale = 'grayscale', // Default: false
   trim = 'trim', // Default: false

@@ -28,6 +28,19 @@ export class ImageTransformer {
     return `transform:${input.resourceId}-${this.hashCache.computeAnyHash({ format, size, aspect_ratio, sharpen, blur, crop, crop_gravity, flip, flop, brightness, saturation, hue, contrast, sepia, grayscale, trim, })}`;
   }
 
+  /**
+   * Resolves a -100 to 100 (user-input) scale to a
+   * 0 to 2 scale for Sharp's transform function.
+   * 
+   * -100 becomes 0
+   * 0 becomes 1
+   * 100 becomes 2
+   * @param value 
+   */
+  resolveUserInputScale = (value: number) => {
+    return Math.min(Math.max(value / 100 + 1, 0), 2);
+  }
+
   async transformImage(input: TransformImageInputWithBuffer) {
     this.log(`Transforming image to size ${JSON.stringify(input.size)} and format "${input.format}"`);
 
@@ -83,9 +96,9 @@ export class ImageTransformer {
       transformer.flop();
     }
     
-    const resolvedBrightness = Math.min(Math.max(brightness, 0), 100);
-    const resolvedSaturation = Math.min(Math.max(saturation, 0), 100);
-    const resolvedHue = Math.min(Math.max(hue, 0), 100);
+    const resolvedBrightness = this.resolveUserInputScale(brightness);
+    const resolvedSaturation = this.resolveUserInputScale(saturation);
+    const resolvedHue = this.resolveUserInputScale(hue);
     if (resolvedBrightness !== 0 || resolvedSaturation !== 0 || resolvedHue !== 0) {
       transformer.modulate({
         brightness: resolvedBrightness,
@@ -94,7 +107,7 @@ export class ImageTransformer {
       });
     }
 
-    const resolvedContrast = Math.min(Math.max(contrast, 0), 100);
+    const resolvedContrast = this.resolveUserInputScale(contrast);
     if (resolvedContrast !== 0) {
       transformer.linear(1 + resolvedContrast / 100, 1 + resolvedContrast / 100);
     }
