@@ -14,7 +14,8 @@
   },
   "homepage": "https://imagejs.mirasaki.dev",
   "repository": {
-    "url": "https://github.com/Mirasaki-Development/imagejs",
+    "type": "git",
+    "url": "https://github.com:Mirasaki-Development/imagejs.git",
     "directory": "packages/typescript-config"
   }
 }

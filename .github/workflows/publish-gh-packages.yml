@@ -1,20 +1,20 @@
-name: Release
+name: Publish package to GitHub Packages
 
 on:
   push:
     branches:
       - main
+  release:
+    types: [published]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
-    name: Release
+  publish-gh-packages:
     runs-on: ubuntu-latest
-    permissions: 
-      contents: write
+    permissions:
+      contents: read
       packages: write
-      actions: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -30,7 +30,7 @@ jobs:
         with:
           node-version: 18.x
           cache: 'pnpm'
-          registry-url: https://registry.npmjs.org/
+          registry-url: https://npm.pkg.github.com
 
       - name: Get pnpm store directory
         shell: bash
@@ -51,12 +51,13 @@ jobs:
       - name: Add NPM_TOKEN to .npmrc
         run: |
           cat << EOF > "$HOME/.npmrc"
-            //registry.npmjs.org/:_authToken=$NPM_TOKEN
+            @mirasaki-development:registry=https://npm.pkg.github.com
+            //npm.pkg.github.com/:_authToken=$GITHUB_TOKEN
           EOF
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create Release Pull Request or Publish to npm
+      - name: Create Publish to GitHub Packages
         id: changesets
         uses: changesets/action@v1
         with:
@@ -66,18 +67,4 @@ jobs:
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-    
-      - name: Send a Discord notification if a publish happens
-        if: steps.changesets.outputs.published == 'true' 
-        uses: tsickert/discord-webhook@v5.3.0
-        continue-on-error: true
-        with:
-          username: "MD | Release and Publish"
-          avatar-url: "https://mirasaki.dev/assets/images/logo.png"
-          webhook-url: ${{ secrets.PUBLISH_WEBHOOK_URL_DISCORD }}
-          embed-author-name: "@${{ github.repository }}"
-          embed-author-url: "https://github.com/${{ github.repository }}"
-          embed-author-icon-url: "https://mirasaki.dev/assets/images/projects/icons/imagejs.png"
-          embed-color: 14228765
-          embed-title: "📦 A new version of ImageJS has been published to npm!"
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
