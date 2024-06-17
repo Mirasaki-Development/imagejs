@@ -1,7 +1,7 @@
 {
   "name": "@imagejs/express",
   "description": "Express middleware to serve users optimized images",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "GPL-3.0+",
   "author": "Richard Hillebrand <me@mirasaki.dev> (https://mirasaki.dev/)",
   "private": false,
