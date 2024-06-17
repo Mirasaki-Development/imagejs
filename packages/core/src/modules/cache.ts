@@ -264,7 +264,13 @@ export class PersistentHashCache extends HashCache {
     this.log(`Loading cache from file at path "${from}"`);
     await this.ensureCacheFileExists();
     const data = await fs.promises.readFile(from);
-    const cache = JSON.parse(data.toString());
+    let cache;
+    try {
+      cache = JSON.parse(data.toString());
+    } catch (err) {
+      this.log(`Failed to parse cache file at path "${from}"`);
+      cache = {};
+    }
     this._cacheHash = this.computeAnyHash(cache);
     for (const [key, value] of Object.entries(cache)) {
       if (typeof value !== 'string') {

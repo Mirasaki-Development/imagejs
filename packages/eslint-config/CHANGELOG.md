@@ -1,5 +1,11 @@
 # @imagejs/eslint-config
 
+## 0.1.3
+
+### Patch Changes
+
+- a151e4b: Add jest tests
+
 ## 0.1.2
 
 ### Patch Changes

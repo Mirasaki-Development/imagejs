@@ -1,5 +1,13 @@
 # @imagejs/fs
 
+## 0.1.3
+
+### Patch Changes
+
+- a151e4b: Add jest tests
+- Updated dependencies [a151e4b]
+  - @imagejs/core@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
