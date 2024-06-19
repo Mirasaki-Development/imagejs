@@ -1,7 +1,7 @@
 {
   "name": "@imagejs/typescript-config",
   "description": "TypeScript configuration for ImageJS packages",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": false,
   "files": [
     "base.json",

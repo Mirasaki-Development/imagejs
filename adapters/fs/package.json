@@ -1,7 +1,7 @@
 {
   "name": "@imagejs/fs",
   "description": "ImageJS adapter for file system operations",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "GPL-3.0+",
   "author": "Richard Hillebrand <me@mirasaki.dev> (https://mirasaki.dev/)",
   "private": false,
