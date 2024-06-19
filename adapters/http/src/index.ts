@@ -61,6 +61,10 @@ export default class HTTPAdapter extends Adapter {
       return undefined;
     }
 
+    if (!await this.has(id)) {
+      return undefined;
+    }
+
     let response: Response;
     try {
       response = await this._client.get(id, {
@@ -85,6 +89,10 @@ export default class HTTPAdapter extends Adapter {
   override async stream(id: string): Promise<undefined | AdapterResult<Readable>> {
     const fileExtension = id.split('.').pop() as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
+      return undefined;
+    }
+
+    if (!await this.has(id)) {
       return undefined;
     }
 

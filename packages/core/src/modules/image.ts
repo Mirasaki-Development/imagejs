@@ -1,12 +1,11 @@
 import path from 'path';
 
 import debug from 'debug';
-import { Adapter, AdapterResult, HashCache, PersistentHashCache, PrivateAdapter, defaultTransformQueryParams } from '.';
-import { MappedImages, OptimizedImageData } from '../types/wrapper';
+import { Adapter, HashCache, PersistentHashCache, PrivateAdapter, defaultTransformQueryParams } from '.';
+import { MappedImages, OptimizedImageData, OptimizedImageDataInner } from '../types/wrapper';
 import { ImageFormat, ImageJSOptions, ImageSize, ImageSizes, SizeKey } from '../types';
 import { defaultSizes, removeImageFormat } from '../helpers';
 import { ImageTransformer } from './transformers';
-import { Readable } from 'stream';
 
 export class ImageJS implements ImageJSOptions {
   public inputAdapter: PrivateAdapter;
@@ -19,7 +18,7 @@ export class ImageJS implements ImageJSOptions {
   constructor(
     inputAdapter: Adapter,
     outputAdapter: Adapter,
-    options?: ImageJSOptions,
+    public options?: ImageJSOptions,
   ) {
     this.inputAdapter = new PrivateAdapter('input', inputAdapter);
     this.outputAdapter = new PrivateAdapter('output', outputAdapter);
@@ -47,9 +46,6 @@ export class ImageJS implements ImageJSOptions {
       ttl: options?.imageCacheOptions?.ttl ?? HashCache.defaults.ttl,
       maxEntries: options?.imageCacheOptions?.maxEntries ?? HashCache.defaults.maxEntries,
     }));
-    for (const [k,v] of Object.entries(options?.permCacheSizes ?? {})) {
-      if (v) this.permanentlyCacheImageSize(k as SizeKey);
-    }
   }
 
   /**
@@ -232,7 +228,11 @@ export class ImageJS implements ImageJSOptions {
 
     const response = await Promise.all(
       resolvedImages.map(async (e) => {
-        const stream = await this.inputAdapter.stream(e, false) as AdapterResult<Readable>;
+        const stream = await this.inputAdapter.stream(e, true);
+        if (!stream) {
+          this.log(`[check-for-changes] Image "${e}" does not exist - this is not normal behavior, was it deleted? If not, create an issue on GitHub.`);
+          return null;
+        }
         const hashKey = await this.hashCache.computeStreamHash(stream.data);
         const fromCache = this.hashCache.get(e);
         if (fromCache === hashKey) {
@@ -246,7 +246,7 @@ export class ImageJS implements ImageJSOptions {
       })
     );
 
-    const toOptimize = response.filter((e) => e !== null) as string[];
+    const toOptimize = response.filter((e): e is string => e !== null);
     const optimizedImages = await this.generateOptimizedSizes({
       save: true,
       inputDir: toOptimize,
@@ -255,6 +255,28 @@ export class ImageJS implements ImageJSOptions {
     const mappedImages = this.mapOptimizedImages(optimizedImages);
     this.hashCache.log('Updated/changed images: %O', mappedImages);
     return Object.keys(mappedImages);
+  }
+
+  async permanentlyCacheImage(
+    image: string,
+    size: SizeKey,
+    targetFormat: ImageFormat,
+    onUnresolved?: (id: string) => void
+  ) {
+    const imageSizeId = this.resolveId(image, size, targetFormat);
+    this.log(`Permanently caching image "${imageSizeId}"`);
+    const response = await this.outputAdapter.fetch(imageSizeId, false);
+    if (!response) {
+      if (onUnresolved) onUnresolved(imageSizeId);
+      return undefined;
+    }
+    const cacheKey = this.transformer.cacheKey({
+      resourceId: imageSizeId,
+      size: this.sizes[size],
+      format: targetFormat,
+      ...defaultTransformQueryParams,
+    });
+    this.transformer.hashCache.set(cacheKey, response.data, null);
   }
 
   async permanentlyCacheImageSize(size: SizeKey) {
@@ -268,28 +290,26 @@ export class ImageJS implements ImageJSOptions {
     }
     this.log(`Permanently caching size "${size}"`);
     const images = await this.inputAdapter.listImages(this.inputAdapter.basePath);
-    const promises = images.map(async (image) => {
-      const imageSizeId = this.resolveId(image, size, this.targetFormat);
-      this.log(`Permanently caching image "${imageSizeId}"`);
-      const response = await this.outputAdapter.fetch(imageSizeId, false);
-      if (!response) {
-        this.log(`Image "${imageSizeId}" does not exist - was it deleted?`);
-        return;
-      }
-      const cacheKey = this.transformer.cacheKey({
-        resourceId: imageSizeId,
-        size: this.sizes[size],
-        format: this.targetFormat,
-        ...defaultTransformQueryParams,
-      });
-      this.transformer.hashCache.set(cacheKey, response.data, null);
-    });
+    const promises = images.map(async (image) => this.permanentlyCacheImage(
+      image,
+      size,
+      this.targetFormat,
+      (id) => this.log(`[perm-cache] Image "${id}" does not exist - this is not normal behavior, was it deleted? If not, create an issue on GitHub.`)
+    ));
     await Promise.all(promises);
   }
 
+  async initializePermanentlyCachedSizes() {
+    for (const [k,v] of Object.entries(this.options?.permCacheSizes ?? {})) {
+      if (v) await this.permanentlyCacheImageSize(k as SizeKey);
+    }
+  }
+
+
   /**
    * Optimize all images in the input directory. Note that this method
-   * will only work if the input adapter supports loading images.
+   * will only work if the input adapter supports loading images when
+   * a directory is provided, instead of a list of images.
    * @param save Whether to save the optimized images
    * @param inputDir The input directory for the images
    * @param outputDir The output directory for the optimized images
@@ -321,7 +341,9 @@ export class ImageJS implements ImageJSOptions {
      */
     callback?: (_id: string, _buffer: Buffer) => void;
   } = {}): Promise<OptimizedImageData> {
-    this.log(`Generating optimized images from ${inputDir} to ${outputDir}`);
+    this.log(`Generating optimized images from ${
+      typeof inputDir === 'string' ? inputDir : 'path[]'
+    } to ${outputDir}`);
     if (typeof inputDir === 'string' && !this.inputAdapter.supportsList) {
       this.inputAdapter.log('This adapter does not support listing images');
       return [];
@@ -332,7 +354,11 @@ export class ImageJS implements ImageJSOptions {
       : inputDir;
     this.log('Images to optimize: %O', images);
     const promises = images.map(async (image) => {
-      const response = await this.inputAdapter.fetch(image, false) as AdapterResult<Buffer>;
+      const response = await this.inputAdapter.fetch(image);
+      if (!response) {
+        this.log(`[generate-optimize-sizes] Image "${image}" does not exist - this is not normal behavior, was it deleted? If not, create an issue on GitHub.`);
+        return null;
+      }
       if (callback) callback(image, response.data);
       const innerPromises = Object.entries(this.sizes).map(async ([sizeKey, size]) => {
         const outputPath = this.resolveId(image, sizeKey as SizeKey, this.targetFormat, outputDir);
@@ -345,7 +371,7 @@ export class ImageJS implements ImageJSOptions {
       });
       return [ image, await Promise.all(innerPromises) ] as const;
     });
-    return await Promise.all(promises);
+    return (await Promise.all(promises)).filter((e): e is OptimizedImageDataInner => e !== null);
   }
 
   /**

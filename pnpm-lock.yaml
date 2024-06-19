@@ -132,49 +132,6 @@ importers:
         specifier: ^5.4.5
         version: 5.4.5
 
-  backend/test-suite:
-    dependencies:
-      express:
-        specifier: ^4.19.2
-        version: 4.19.2
-    devDependencies:
-      '@imagejs/aws':
-        specifier: workspace:*
-        version: link:../../adapters/aws
-      '@imagejs/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@imagejs/eslint-config':
-        specifier: workspace:*
-        version: link:../../packages/eslint-config
-      '@imagejs/express':
-        specifier: workspace:*
-        version: link:../../backend/express
-      '@imagejs/fs':
-        specifier: workspace:*
-        version: link:../../adapters/fs
-      '@imagejs/http':
-        specifier: workspace:*
-        version: link:../../adapters/http
-      '@imagejs/jest-presets':
-        specifier: workspace:*
-        version: link:../../packages/jest-presets
-      '@imagejs/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/express':
-        specifier: ^4.17.21
-        version: 4.17.21
-      '@types/jest':
-        specifier: ^29.5.12
-        version: 29.5.12
-      jest:
-        specifier: ^29.7.0
-        version: 29.7.0(@types/node@20.14.2)
-      typescript:
-        specifier: ^5.4.5
-        version: 5.4.5
-
   backend/express:
     dependencies:
       '@imagejs/core':
@@ -205,6 +162,52 @@ importers:
       rimraf:
         specifier: ^5.0.7
         version: 5.0.7
+      tsup:
+        specifier: ^8.0.2
+        version: 8.1.0(typescript@5.4.5)
+      typescript:
+        specifier: ^5.4.5
+        version: 5.4.5
+
+  backend/test-suite:
+    dependencies:
+      express:
+        specifier: ^4.19.2
+        version: 4.19.2
+    devDependencies:
+      '@imagejs/aws':
+        specifier: workspace:*
+        version: link:../../adapters/aws
+      '@imagejs/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@imagejs/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@imagejs/express':
+        specifier: workspace:*
+        version: link:../express
+      '@imagejs/fs':
+        specifier: workspace:*
+        version: link:../../adapters/fs
+      '@imagejs/http':
+        specifier: workspace:*
+        version: link:../../adapters/http
+      '@imagejs/jest-presets':
+        specifier: workspace:*
+        version: link:../../packages/jest-presets
+      '@imagejs/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.21
+      '@types/jest':
+        specifier: ^29.5.12
+        version: 29.5.12
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.14.2)
       tsup:
         specifier: ^8.0.2
         version: 8.1.0(typescript@5.4.5)
