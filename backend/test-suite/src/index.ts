@@ -6,7 +6,9 @@ import { expressMiddleware } from '@imagejs/express';
 
 export const separate = () => {
   const imageJS = new ImageJS(
-    new FSAdapter('public/images'),
+    // Note: We provide the nested excludePattern so that we 
+    // can use either instance without exponential growth of dir
+    new FSAdapter('public/images', { ignorePatterns: ['optimized/**'] }),
     new FSAdapter('public/optimized'),
     { permCacheSizes: { original: true } }
   );
@@ -32,6 +34,9 @@ export const main = async () => {
   // const imageJS = await nested();
 
   await imageJS.sync();
+  // await imageJS.initializePermanentlyCachedSizes();
+
+  console.log(await imageJS.inputAdapter.listImages());
 
   // Before Static Files
   app.use('/images', expressMiddleware({
@@ -52,3 +57,14 @@ export const main = async () => {
     console.info('Server is running on http://localhost:3000');
   });
 };
+
+const args = process.argv.slice(2);
+if (args.includes('--nested')) {
+  nested();
+}
+if (args.includes('--separate')) {
+  separate();
+}
+if (args.includes('--main')) {
+  main();
+}
