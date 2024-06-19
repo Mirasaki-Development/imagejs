@@ -1,5 +1,13 @@
 # @imagejs/http
 
+## 0.1.4
+
+### Patch Changes
+
+- degrade internal operations gracefully
+- Updated dependencies
+  - @imagejs/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes
