@@ -61,6 +61,10 @@ export default class AWSAdapter extends Adapter {
       undefined;
     }
 
+    if (!await this.has(id, prefixBase)) {
+      return undefined;
+    }
+
     return new Promise((resolve, reject) => {
       try {
         this.client.send(new GetObjectCommand({

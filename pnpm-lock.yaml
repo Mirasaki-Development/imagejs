@@ -208,6 +208,9 @@ importers:
       jest:
         specifier: ^29.7.0
         version: 29.7.0(@types/node@20.14.2)
+      tsup:
+        specifier: ^8.0.2
+        version: 8.1.0(typescript@5.4.5)
       typescript:
         specifier: ^5.4.5
         version: 5.4.5

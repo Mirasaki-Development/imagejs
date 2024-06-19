@@ -26,8 +26,9 @@ export default class FSAdapter extends Adapter {
   }
 
   override async has(id: string, prefixBase = true): Promise<boolean> {
+    const fileTarget = path.join(process.cwd(), prefixBase ? path.join(this.basePath, id) : id);
     try {
-      await fs.promises.access(prefixBase ? path.join(this.basePath, id) : id);
+      await fs.promises.access(fileTarget);
       return true;
     } catch (error) {
       return false;
@@ -35,20 +36,24 @@ export default class FSAdapter extends Adapter {
   }
 
   override async fetch(id: string, prefixBase = true): Promise<AdapterResult | undefined> {
-    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
-    const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
+    const fileTarget = path.join(process.cwd(), prefixBase ? path.join(this.basePath, id) : id);
+    const fileExtension = path.extname(fileTarget).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
+      return undefined;
+    }
+
+    if (!await this.has(id, prefixBase)) {
       return undefined;
     }
 
     let buffer: Buffer;
     try {
-      buffer = await fs.promises.readFile(imagePath);
+      buffer = await fs.promises.readFile(fileTarget);
     } catch (error) {
       if (isENOENT(error)) {
         return undefined;
       }
-      throw new Error(`Could not read file at path "${imagePath}": ${error}`);
+      throw new Error(`Could not read file at path "${fileTarget}": ${error}`);
     }
     
     return {
@@ -57,18 +62,21 @@ export default class FSAdapter extends Adapter {
     };
   }
 
-  override stream(id: string, prefixBase = true): undefined | AdapterResult<Readable> {
-    const imagePath = prefixBase ? path.join(this.basePath, id) : id;
-    const fileExtension = path.extname(imagePath).slice(1) as ImageFormat;
+  override async stream(id: string, prefixBase = true): Promise<undefined | AdapterResult<Readable>> {
+    const fileTarget = path.join(process.cwd(), prefixBase ? path.join(this.basePath, id) : id);
+    const fileExtension = path.extname(fileTarget).slice(1) as ImageFormat;
     if (!imageFormats.includes(fileExtension)) {
       return undefined;
     }
-    const stream = fs.createReadStream(imagePath);
+    if (!await this.has(id, prefixBase)) {
+      return undefined;
+    }
+    const stream = fs.createReadStream(fileTarget);
     stream.on('error', (error) => {
       if (isENOENT(error)) {
         return undefined;
       }
-      throw new Error(`Could not read file at path "${imagePath}": ${error}`);
+      throw new Error(`Could not read file at path "${fileTarget}": ${error}`);
     });
     return {
       data: stream,
@@ -77,36 +85,39 @@ export default class FSAdapter extends Adapter {
   }
   
   override async save(id: string, data: Buffer): Promise<void> {
-    const dir = path.dirname(id);
-    if (!fs.existsSync(dir)) {
-      await fs.promises.mkdir(dir, { recursive: true });
+    const dirTarget = path.join(process.cwd(), path.dirname(id));
+    if (!fs.existsSync(dirTarget)) {
+      await fs.promises.mkdir(dirTarget, { recursive: true });
     }
-    await fs.promises.writeFile(id, data);
+    const fileTarget = path.join(dirTarget, path.basename(id));
+    await fs.promises.writeFile(fileTarget, data);
   }
 
   override async listImages(dir?: string): Promise<string[]> {
-    const resolvedDir = dir ?? this.basePath;
+    const dirTarget = path.join(process.cwd(), dir ?? this.basePath);
     return glob(
       globPattern,
       {
-        cwd: path.join(process.cwd(), resolvedDir),
+        cwd: dirTarget,
         nodir: true,
         ignore: this.ignorePatterns,
       }
-    ).then((e) => e.map((image) => path.join(resolvedDir, image)));
+    );
   }
 
   override async delete(id: string): Promise<void> {
+    const fileTarget = path.join(process.cwd(), path.join(this.basePath, id));
     try {
-      await fs.promises.unlink(path.join(this.basePath, id));
+      await fs.promises.unlink(fileTarget);
     } catch (error) {
       throw new Error(`Could not delete file at path "${id}": ${error}`);
     }
   }
 
   override async clean(): Promise<void> {
+    const dirTarget = path.join(process.cwd(), this.basePath);
     try {
-      await fs.promises.rmdir(this.basePath, { recursive: true });
+      await fs.promises.rmdir(dirTarget, { recursive: true });
     } catch (error) {
       throw new Error(`Could not clean directory at path "${this.basePath}": ${error}`);
     }  
