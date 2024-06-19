@@ -127,7 +127,7 @@ describe('cache', () => {
       cache.set(id, value);
       await new Promise((resolve) => setTimeout(resolve, ttl / 2));
       cache.set(`${id}-new`, value);
-      await new Promise((resolve) => setTimeout(resolve, ttl / 2));
+      await new Promise((resolve) => setTimeout(resolve, (ttl / 2) + 1));
       expect(cache.get(id)).toBeUndefined();
       expect(cache.size).toBe(1);
       cache.clear();
